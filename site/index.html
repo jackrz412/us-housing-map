@@ -62,6 +62,10 @@
          as empty rather than as the grey neutral class of a diverging scale. */
       --na-fill: var(--surface);
       --na-line: #b0afa8;
+      /* Fainter hatch for layers where most counties have no data. */
+      --na-line-quiet: #dedcd5;
+      /* Edge on small color swatches, so pale fills don't vanish. */
+      --swatch-edge: rgba(11, 11, 11, 0.35);
     }
     /* Dark mode swaps surfaces and ink only. Data colors come from layers.js
        and are the same in both modes, so color direction never flips. */
@@ -71,7 +75,8 @@
         --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
         --ink: #ffffff; --ink-2: #c3c2b7; --muted: #9a998f;
         --border: rgba(255, 255, 255, 0.12); --accent: #9bc1f1; --focus: #ffffff;
-        --na-line: #55554f;
+        --na-line: #55554f; --na-line-quiet: #353532;
+        --swatch-edge: rgba(255, 255, 255, 0.35);
       }
     }
     :root[data-theme="dark"] {
@@ -79,7 +84,8 @@
       --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
       --ink: #ffffff; --ink-2: #c3c2b7; --muted: #9a998f;
       --border: rgba(255, 255, 255, 0.12); --accent: #9bc1f1; --focus: #ffffff;
-      --na-line: #55554f;
+      --na-line: #55554f; --na-line-quiet: #353532;
+      --swatch-edge: rgba(255, 255, 255, 0.35);
     }
 
     * { box-sizing: border-box; }
@@ -143,7 +149,10 @@
     }
     @media (max-width: 380px) {
       .layer-title { min-height: 3.9em; min-height: 3lh; }
+      /* "Better than baseline / Worse than baseline" wraps below ~340px. */
+      .ends { min-height: 2.8em; min-height: 2lh; }
     }
+    .na-quiet { --na-line: var(--na-line-quiet); }
     .na-key { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
     .na-key svg { flex: none; border: 1px solid var(--border); border-radius: 2px; }
 
@@ -175,8 +184,12 @@
     .county-borders { fill: none; vector-effect: non-scaling-stroke; stroke: var(--surface); stroke-width: 0.25; stroke-linejoin: round; pointer-events: none; }
     .state-borders { fill: none; vector-effect: non-scaling-stroke; stroke: var(--surface); stroke-width: 1; stroke-linejoin: round; pointer-events: none; }
     .hover-outline { fill: none; vector-effect: non-scaling-stroke; stroke: var(--ink); stroke-width: 1.5; pointer-events: none; }
-    .selected-outline { fill: none; vector-effect: non-scaling-stroke; stroke: var(--ink); stroke-width: 2.5; pointer-events: none; }
-    .selected-outline-halo { fill: none; vector-effect: non-scaling-stroke; stroke: var(--surface); stroke-width: 5; pointer-events: none; }
+    /* Selected county: a 2px ink line on a 6px halo of the page surface, so
+       2px of light shows on each side. It's drawn after every county and
+       border, so neighbours never cover it, and the halo keeps it visible on
+       the darkest fills (where ink alone would nearly vanish). */
+    .selected-outline { fill: none; vector-effect: non-scaling-stroke; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; pointer-events: none; }
+    .selected-outline-halo { fill: none; vector-effect: non-scaling-stroke; stroke: var(--surface); stroke-width: 6; stroke-linejoin: round; pointer-events: none; }
 
     /* County panel */
     .panel, table, .ticks { font-variant-numeric: tabular-nums; }
@@ -187,7 +200,9 @@
     .panel dl { margin: 0; }
     .row { display: grid; grid-template-columns: 12px 1fr auto; gap: 2px 8px; align-items: baseline; padding: 5px 6px; border-radius: 6px; }
     .row.active { background: var(--surface-2); }
-    .row .chip { width: 10px; height: 10px; border-radius: 2px; align-self: center; }
+    .row .chip { width: 10px; height: 10px; border-radius: 2px; align-self: center; box-sizing: border-box; }
+    /* An edge so the lightest bins (near the surface color) stay visible. */
+    .row .chip.filled { border: 1px solid var(--swatch-edge); }
     .row dt { font-size: 13px; color: var(--ink-2); }
     .row dd { margin: 0; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
     .row dd.na { font-weight: 400; color: var(--muted); font-size: 13px; }
@@ -247,7 +262,7 @@
     </fieldset>
 
     <div class="layout">
-      <section class="card" aria-labelledby="layer-title">
+      <section class="card" id="map-card" aria-labelledby="layer-title">
         <p class="layer-title" id="layer-title">Loading…</p>
         <p class="layer-sub" id="layer-sub"></p>
         <div class="legend" id="legend" aria-hidden="true">
@@ -310,7 +325,7 @@
 
     <div class="notes">
       <p>Grey hatching means <strong>Data not available</strong>: the source doesn't publish that county, or its sample is too small (fewer than 30 loans or owner households). Missing data is excluded, not estimated.</p>
-      <p>Colors use fixed breaks, so a color means the same thing in every county. On two-sided scales the blue end means lower than the midpoint (a benchmark, or the US share where marked), not "safe".</p>
+      <p>Colors use fixed breaks, so a color means the same thing in every county. Two layers use two-sided scales with a grey middle: delinquency is compared with each county's own 2017–2019 average, and owner cost burden with the US share. Blue means below that midpoint, not "safe".</p>
       <p id="sources"></p>
     </div>
   </main>
