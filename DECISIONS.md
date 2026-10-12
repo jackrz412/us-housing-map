@@ -73,3 +73,10 @@ Each entry: the decision, the alternatives, and why. Newest at the bottom.
 - **Over:** dropping a loan entirely when any field is exempt, or one suppression rule based on total loans.
 - **Why:** per-field validity keeps every usable value. A loan with an exempt DTI still has a valid rate. Lenders exempt from reporting the open-end or reverse flag (code `1111`, ~113k loans) aren't evidence that a loan *is* open-end or reverse, so those loans stay in.
 - **Note:** 99.8% of qualifying loans are in counties that survive suppression. The ~425 suppressed counties are small and rural.
+
+## 014 — Owner cost burden as the share of mortgaged owners at 30%+, with ACS reliability rules (2026-10-12)
+- **Chose:** the share of owner-occupied units with a mortgage paying ≥ 30% of income on owner costs (ACS B25091), with ≥ 50% as click-panel context. Suppress below 30 mortgaged owner units with a computed burden. Flag `low_reliability` where the derived CV exceeds 40% or the share is 0.
+- **Over:** the county median burden (B25092), as first planned.
+- **Why:** the median reaches the HUD 30% line in only 23 of 3,140 counties, so the benchmark scale would be ~99% one color. The share uses the same HUD threshold but varies meaningfully (p10 17.9%, median 24.8%, p90 35.3%; US 28.1%). Suppression mirrors the HMDA 30-observation rule. The CV flag uses the Census MOE approximation formulas.
+- **Cost accepted:** the diverging midpoint becomes the US share rather than the 30% line itself. The 30% line is now built into the definition. CV flags miss some outliers (only 3 of the 21 counties above 50% are flagged).
+- **Also:** all layer-level nuances are now tracked in `METHODOLOGY.md`, updated in the same PR as any change.

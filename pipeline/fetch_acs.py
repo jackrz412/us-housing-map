@@ -15,7 +15,12 @@ from geo import RAW_DIR
 
 # Latest published 5-year vintage (2020-2024). Bump when 2021-2025 is released.
 ACS_YEAR = 2024
-TABLES = ["b19013"]  # median household income
+TABLES = [
+    "b19013",  # median household income
+    "b25091",  # mortgage status by owner costs as % of household income (distribution)
+    "b25103",  # median real estate taxes paid, by mortgage status
+    "b11001",  # households (total)
+]
 
 URL = (
     "https://www2.census.gov/programs-surveys/acs/summary_file/{year}"

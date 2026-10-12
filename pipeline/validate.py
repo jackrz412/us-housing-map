@@ -25,6 +25,12 @@ LAYERS = {
     "hmda_dti_over_43": {"min_counties": HMDA_FLOOR, "min": 0, "max": 100},
     "hmda_cltv_over_90": {"min_counties": HMDA_FLOOR, "min": 0, "max": 100},
     "hmda_loan_amount": {"min_counties": HMDA_FLOOR, "min": 10_000, "max": 5_000_000},
+    "acs_cost_burden": {"min_counties": 3000, "min": 0, "max": 100},
+    "acs_cost_burden_severe": {"min_counties": 3000, "min": 0, "max": 100},
+    "acs_property_tax_income": {"min_counties": 3000, "min": 0, "max": 20},
+    # BPS covers ~3,020 counties (those with permit-issuing places), so the
+    # standard 3,000 floor would leave almost no margin.
+    "permits_per_1000_hh": {"min_counties": 2900, "min": 0, "max": 500},
 }
 META_FIELDS = ["label", "source", "period", "legend_period", "source_url", "run_date"]
 
@@ -96,6 +102,13 @@ def validate_layer(name, rules, shapes, meta, r):
     entry = meta.get(name, {})
     missing = [f for f in META_FIELDS if not entry.get(f)]
     r.check(not missing, "meta.json entry complete", f"missing {missing}")
+
+    # Per-county flags in meta.json (e.g. low_reliability, topcoded) must point
+    # at counties that are on the map and have a value to qualify.
+    for flag, fips_list in entry.get("flags", {}).items():
+        stray = [f for f in fips_list if f not in values]
+        r.check(not stray, f"flag '{flag}' ({len(fips_list)}) only on counties with a value",
+                sample(stray))
 
 
 def main():
