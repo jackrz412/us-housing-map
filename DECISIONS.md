@@ -73,3 +73,16 @@ Each entry: the decision, the alternatives, and why. Newest at the bottom.
 - **Over:** dropping a loan entirely when any field is exempt, or one suppression rule based on total loans.
 - **Why:** per-field validity keeps every usable value. A loan with an exempt DTI still has a valid rate. Lenders exempt from reporting the open-end or reverse flag (code `1111`, ~113k loans) aren't evidence that a loan *is* open-end or reverse, so those loans stay in.
 - **Note:** 99.8% of qualifying loans are in counties that survive suppression. The ~425 suppressed counties are small and rural.
+
+## 014 — Owner cost burden as the share of mortgaged owners at 30%+, with ACS reliability rules (2026-10-12)
+- **Chose:** the share of owner-occupied units with a mortgage paying ≥ 30% of income on owner costs (ACS B25091), with ≥ 50% as click-panel context. Suppress below 30 mortgaged owner units with a computed burden. Flag `low_reliability` where the derived CV exceeds 40% or the share is 0.
+- **Over:** the county median burden (B25092), as first planned.
+- **Why:** the median reaches the HUD 30% line in only 23 of 3,140 counties, so the benchmark scale would be ~99% one color. The share uses the same HUD threshold but varies meaningfully (p10 17.9%, median 24.8%, p90 35.3%; US 28.1%). Suppression mirrors the HMDA 30-observation rule. The CV flag uses the Census MOE approximation formulas.
+- **Cost accepted:** the diverging midpoint becomes the US share rather than the 30% line itself. The 30% line is now built into the definition. CV flags miss some outliers (only 3 of the 21 counties above 50% are flagged).
+- **Also:** all layer-level nuances are now tracked in `METHODOLOGY.md`, updated in the same PR as any change.
+
+## 015 — Property tax burden uses owner household income (2026-10-12)
+- **Chose:** median real estate taxes paid (B25103) ÷ median household income of owner-occupied households (`B25119_E002`).
+- **Over:** ÷ median household income of all households (B19013), as first specified for 2b.
+- **Why:** property taxes are paid by owners, so the income should be owners' too. All-household income includes renters, who typically earn less, which overstated the burden. The owner-only ratio is ~14% lower at the county median (2.12% vs 2.46%) and its maximum falls from 12.4% to 7.7%.
+- **Cost accepted:** one more ACS table. Coverage is unchanged at 3,136 counties: De Baca County, NM gains a value and Culberson County, TX loses one.

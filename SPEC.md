@@ -17,17 +17,17 @@ Phase 2 reframes the map around the **double trigger** model of mortgage default
 | Role | Layer | Source | Definition | Color scale |
 |---|---|---|---|---|
 | Outcome | Delinquency vs own baseline | CFPB | z-score of the latest 90+ day delinquency rate against the county's 2015–2019 mean and SD (DECISIONS 012) | Diverging, midpoint 0 |
-| Burden | Owner cost burden | ACS `B25092_E002` | **Median** selected monthly owner costs as % of household income, owner-occupied units *with a mortgage* | Diverging, midpoint 30% (HUD cost-burdened), extra step at 50% (severely cost-burdened) |
+| Burden | Owner cost burden | ACS `B25091` | **Share** of owner-occupied units *with a mortgage* paying ≥ 30% of household income on owner costs (HUD cost-burdened line) | Diverging around the US share (28.1%); see METHODOLOGY.md for proposed breaks |
 | Burden | High-DTI loans | HMDA | % of 2025 qualifying loans with debt-to-income above 43% | Sequential warm |
-| Burden | Property tax burden | ACS | Median real estate taxes paid (`B25103_E001`) ÷ median household income (`B19013_E001`), as % | Sequential warm |
+| Burden | Property tax burden | ACS | Median real estate taxes paid (`B25103_E001`) ÷ median household income of owner-occupied households (`B25119_E002`), as % | Sequential warm |
 | Equity | High-CLTV loans | HMDA | % of 2025 qualifying loans with combined loan-to-value above 90% | Sequential warm |
-| Context (click panel only) | Median household income; median HMDA rate; permits per 1,000 households | ACS `B19013`; HMDA; BPS ÷ ACS `B11001_E001` | as named | Neutral blue |
+| Context (click panel only) | Median household income (all households); median HMDA rate; permits per 1,000 households; severe cost burden (≥ 50%); loan count; median loan amount | ACS `B19013`; HMDA; BPS ÷ ACS `B11001_E001`; ACS `B25091` | as named | Neutral blue |
 
 "Qualifying" HMDA loans are originated, home-purchase, first-lien, principal-residence loans, excluding open-end lines of credit and reverse mortgages (DECISIONS 013).
 
-**Open question for 2b, owner cost burden.** `B25092_E002` is a county *median*, and medians rarely reach the HUD line. In ACS 2020–2024 the county median is 19.6% (10th–90th percentile 17.4–23.3%). Only 23 of 3,140 counties reach 30% and 2 reach 50%. A diverging scale centred on 30% would show ~99% of the map on the cool side. Options for 2b:
-- Keep the median and its benchmarks, accepting a mostly-cool layer whose message is "few counties have a typical owner over the line".
-- Switch to the *share* of mortgaged owners above 30% from `B25091` (the distribution table), which spreads across counties and keeps the HUD threshold meaningful.
+**Owner cost burden uses the share, not the median (DECISIONS 014).** The county median (`B25092_E002`) reaches 30% in only 23 of 3,140 counties. The share at ≥ 30% (`B25091`) spreads from 17.9% to 35.3% (p10–p90). The share at ≥ 50% (severely cost-burdened) goes in the click panel as context.
+
+Definitions, caveats and proposed legend breaks for every layer are in **`METHODOLOGY.md`**.
 
 ### Color rules
 - **Discrete classes** via `d3.scaleThreshold` with **fixed benchmark breaks**, not quantiles, so a class means the same thing in every county and every data year (DECISIONS 011). Each layer's breaks are listed in `meta.json` and shown in the legend.
@@ -38,8 +38,9 @@ Phase 2 reframes the map around the **double trigger** model of mortgage default
 - Context metrics appear only in the click panel, in neutral blue, never as a map layer.
 
 ### Metric rules
+- **ACS share suppression and reliability:** cost-burden shares are null below 30 mortgaged owner units with a computed burden, and flagged `low_reliability` in `meta.json` where the CV exceeds 40% or the share is 0.
 - **HMDA suppression:** a metric is null where the county has fewer than 30 *valid* loans for that metric. `Exempt` and `NA` are dropped per field, so each metric has its own valid count. The threshold is configurable (`--min-loans`) and recorded in `meta.json`.
-- **Property tax burden:** labelled a "ratio of medians", not the median household's actual tax share.
+- **Property tax burden:** labelled a "ratio of medians", not the median household's actual tax share. Top-coded counties (taxes ≥ $10,000) are flagged `topcoded`; their ratio is a lower bound.
 - **Permits:** labelled as permits, never as "starts".
 - **Delinquency z-score:** counties whose baseline SD is near zero are flagged, not shown as extreme (2c).
 - Every layer shows its data period (e.g. "HMDA 2025") in the legend.
@@ -48,7 +49,7 @@ Phase 2 reframes the map around the **double trigger** model of mortgage default
 | PR | Branch | Scope |
 |---|---|---|
 | 2a | `phase-2a-hmda` | HMDA pipeline: loan count, median rate, DTI > 43% share, CLTV > 90% share, median loan amount |
-| 2b | `phase-2b-acs` | ACS burden layers: owner cost burden, property tax % of income, permits per 1,000 households |
+| 2b | `phase-2b-acs` | ACS burden layers: owner cost burden share (B25091), property tax % of income, permits per 1,000 households; `METHODOLOGY.md` |
 | 2c | `phase-2c-delinquency` | CFPB delinquency z-score against the 2015–2019 baseline |
 | 2d | `phase-2d-ui` | Grouped layer switcher, new scales, click panel with context metrics, keyboard access, table view |
 
