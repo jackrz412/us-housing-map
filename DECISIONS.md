@@ -96,3 +96,15 @@ Each entry: the decision, the alternatives, and why. Newest at the bottom.
   - **Why not shorter.** Shorter windows remove more of the trend but shrink SDs toward CFPB's 0.1-point rounding. 2018–2019 leaves 346 counties with SD < 0.2. 2017–2019 balances the two: median z −0.10, 98 counties ≥ +1, 132 ≤ −1.
   - **The floor.** One 0.1-point rounding step moves z by 0.1 ÷ SD. Below SD 0.2 that exceeds 0.5, the narrowest legend class, so z would reflect rounding rather than change. Flooring rather than flagging keeps every county on the map with a conservative score.
 - **Cost accepted:** the floor applies to 223 of 507 counties, so for nearly half the map z understates moves relative to a very stable baseline. A small within-window decline remains (median −0.14 points/year), so z leans slightly negative. Both are documented in METHODOLOGY.md.
+
+## 017 — Phase 2 UI: palettes, legend config, default layer, keyboard model (2026-10-12)
+- **Chose:**
+  - **Palettes.** One warm sequential ramp (cream → red-brown), sampled at each layer's class count. One diverging palette (blue → grey → red-orange) with lightness matched across arms. Both built in OKLCH and checked with the dataviz validator's color math: lightness is monotonic along each ramp/arm, and the worst adjacent ΔE under simulated protan/deutan is 7.9 (warm, 7 classes) and 12.4 (diverging). The same colors are used in light and dark mode.
+  - **Breaks** as proposed in METHODOLOGY.md. Defined with roles, labels and formats in `site/layers.js`.
+  - **"Data not available"** is a hatch over the bare surface, not a grey fill, so it can't be confused with the diverging scales' grey neutral class.
+  - **Default layer:** owner cost burden.
+  - **Keyboard:** native radios for the layer switcher. A roving tabindex on the map (one tab stop; arrow keys move to the nearest county in that direction; Enter opens the panel; Esc closes). A county search box. A sortable, filterable table of all counties for the active layer.
+  - **URL:** layer and selected county are kept in the hash (`#layer=…&county=…`) so a view can be shared.
+- **Over:** breaks in `meta.json` (as SPEC first said); delinquency as the default layer; making every county a tab stop.
+- **Why:** breaks and colors are presentation choices that change with the page, not with the data, so they belong with the site code. `meta.json` stays a description of the data. Delinquency is the outcome layer but covers only 507 counties, so as a default it would open on a mostly hatched map. Owner cost burden covers 3,134 and sits at the centre of the burden framing. 3,144 tab stops would make the map a keyboard trap; a roving tabindex makes it one stop.
+- **Cost accepted:** the first warm step (`#ffeccd`) is close to the light page surface; county borders and the legend carry it. Arrow-key navigation follows centroids, so between irregular or island counties it can jump further than expected. The search box covers direct access.

@@ -3,130 +3,247 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>US Housing Map</title>
-  <meta name="description" content="Median household income by US county, from the Census American Community Survey.">
+  <title>US Mortgage Risk Map</title>
+  <meta name="description" content="Where US mortgage risk is building, county by county: delinquency, payment burden and equity.">
   <style>
     :root {
       color-scheme: light;
       --page: #f9f9f7;
       --surface: #fcfcfb;
+      --surface-2: #f3f2ee;
       --ink: #0b0b0b;
       --ink-2: #52514e;
-      --muted: #898781;
-      --border: rgba(11, 11, 11, 0.10);
-      /* Sequential ramp, one hue (blue), light -> dark = low -> high. */
-      --seq-0: #cde2fb; --seq-1: #9ec5f4; --seq-2: #6da7ec; --seq-3: #3987e5;
-      --seq-4: #256abf; --seq-5: #184f95; --seq-6: #0d366b;
-      /* "Data not available": neutral grey + hatch, so it never reads as a low value. */
-      --na-fill: #e1e0d9;
-      --na-line: #b5b4ad;
+      --muted: #6f6e69;
+      --border: rgba(11, 11, 11, 0.12);
+      --accent: #215da5;
+      --focus: #0b0b0b;
+      /* "Data not available": hatch lines over the bare surface, so it reads
+         as empty rather than as the grey neutral class of a diverging scale. */
+      --na-fill: var(--surface);
+      --na-line: #b0afa8;
     }
-    /* Dark mode swaps the surfaces and ink only. The --seq ramp is deliberately
-       not overridden: light = low, dark = high in both modes. */
+    /* Dark mode swaps surfaces and ink only. Data colors come from layers.js
+       and are the same in both modes, so color direction never flips. */
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
         color-scheme: dark;
-        --page: #0d0d0d; --surface: #1a1a19;
-        --ink: #ffffff; --ink-2: #c3c2b7; --border: rgba(255, 255, 255, 0.10);
-        --na-fill: #2c2c2a; --na-line: #4a4a46;
+        --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
+        --ink: #ffffff; --ink-2: #c3c2b7; --muted: #9a998f;
+        --border: rgba(255, 255, 255, 0.12); --accent: #9bc1f1; --focus: #ffffff;
+        --na-line: #55554f;
       }
     }
     :root[data-theme="dark"] {
       color-scheme: dark;
-      --page: #0d0d0d; --surface: #1a1a19;
-      --ink: #ffffff; --ink-2: #c3c2b7; --border: rgba(255, 255, 255, 0.10);
-      --na-fill: #2c2c2a; --na-line: #4a4a46;
+      --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
+      --ink: #ffffff; --ink-2: #c3c2b7; --muted: #9a998f;
+      --border: rgba(255, 255, 255, 0.12); --accent: #9bc1f1; --focus: #ffffff;
+      --na-line: #55554f;
     }
 
     * { box-sizing: border-box; }
     body {
-      margin: 0;
-      background: var(--page);
-      color: var(--ink);
+      margin: 0; background: var(--page); color: var(--ink);
       font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
     }
-    main { max-width: 1080px; margin: 0 auto; padding: 24px 16px 40px; }
-    h1 { font-size: 22px; line-height: 1.25; margin: 0 0 4px; font-weight: 650; }
-    .sub { color: var(--ink-2); margin: 0 0 16px; }
-
+    main { max-width: 1240px; margin: 0 auto; padding: 24px 16px 48px; }
+    h1 { font-size: 24px; line-height: 1.2; margin: 0 0 4px; font-weight: 650; }
+    .lede { color: var(--ink-2); margin: 0 0 16px; max-width: 760px; }
+    .lede a, .notes a { color: inherit; }
     .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px;
+    }
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+    .visually-hidden {
+      position: absolute; width: 1px; height: 1px; overflow: hidden;
+      clip: rect(0 0 0 0); white-space: nowrap;
     }
 
-    /* Legend: 7 swatches with the threshold values under the boundaries. */
-    .legend { max-width: 460px; margin-bottom: 8px; }
-    .legend-title { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
-    .legend-row { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
-    .ramp { flex: 1 1 280px; }
-    .swatches { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; height: 12px; }
+    /* Layer switcher: one radio group, visually grouped by role. */
+    .switcher { border: 0; margin: 0 0 12px; padding: 0; display: flex; flex-wrap: wrap; gap: 12px 20px; }
+    .switcher > legend { padding: 0; margin-bottom: 6px; font-size: 13px; color: var(--ink-2); }
+    .role { display: flex; flex-direction: column; gap: 4px; }
+    .role-label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+    .role-options { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pill { position: relative; }
+    .pill input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+    .pill span {
+      display: inline-block; padding: 6px 12px; border-radius: 999px;
+      border: 1px solid var(--border); background: var(--surface-2);
+      font-size: 14px; white-space: nowrap; cursor: pointer;
+    }
+    .pill input:checked + span { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+    .pill input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+    .layer-title { font-size: 16px; font-weight: 600; margin: 0 0 2px; }
+    .layer-sub { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; }
+
+    /* Legend */
+    .legend { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 20px; margin-bottom: 4px; }
+    .ramp { flex: 1 1 300px; max-width: 480px; }
+    .swatches { display: grid; gap: 2px; height: 12px; }
     .swatches span { border-radius: 2px; }
-    .ticks { position: relative; height: 18px; font-size: 11px; color: var(--muted);
-             font-variant-numeric: tabular-nums; }
+    .ticks { position: relative; height: 18px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
     .ticks span { position: absolute; top: 3px; transform: translateX(-50%); white-space: nowrap; }
+    .ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-2); }
+    .legend-unit { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
     .na-key { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
-    .na-key svg { flex: none; border-radius: 2px; }
+    .na-key svg { flex: none; border: 1px solid var(--border); border-radius: 2px; }
 
-    .map-wrap { position: relative; }
+    .search { display: flex; gap: 8px; align-items: center; margin: 8px 0 4px; font-size: 13px; color: var(--ink-2); flex-wrap: wrap; }
+    .search input {
+      font: inherit; font-size: 14px; color: var(--ink); background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; width: min(280px, 100%);
+    }
+    .kbd-hint { font-size: 12px; color: var(--muted); }
+
     svg.map { display: block; width: 100%; height: auto; }
-    .counties path { cursor: default; }
-    .county-borders { fill: none; stroke: var(--surface); stroke-width: 0.25; stroke-linejoin: round; }
-    .state-borders { fill: none; stroke: var(--surface); stroke-width: 1; stroke-linejoin: round; }
+    svg.map:focus { outline: none; }
+    .counties path { cursor: pointer; outline: none; }
+    .county-borders { fill: none; stroke: var(--surface); stroke-width: 0.25; stroke-linejoin: round; pointer-events: none; }
+    .state-borders { fill: none; stroke: var(--surface); stroke-width: 1; stroke-linejoin: round; pointer-events: none; }
     .hover-outline { fill: none; stroke: var(--ink); stroke-width: 1.5; pointer-events: none; }
+    .selected-outline { fill: none; stroke: var(--ink); stroke-width: 2.5; pointer-events: none; }
+    .selected-outline-halo { fill: none; stroke: var(--surface); stroke-width: 5; pointer-events: none; }
 
+    /* County panel */
+    .panel h2 { font-size: 18px; margin: 0; line-height: 1.25; }
+    .panel .place { color: var(--ink-2); font-size: 13px; margin: 2px 0 12px; }
+    .panel .empty { color: var(--ink-2); font-size: 14px; }
+    .panel h3 { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; font-weight: 600; }
+    .panel dl { margin: 0; }
+    .row { display: grid; grid-template-columns: 12px 1fr auto; gap: 2px 8px; align-items: baseline; padding: 5px 6px; border-radius: 6px; }
+    .row.active { background: var(--surface-2); }
+    .row .chip { width: 10px; height: 10px; border-radius: 2px; align-self: center; }
+    .row dt { font-size: 13px; color: var(--ink-2); }
+    .row dd { margin: 0; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+    .row dd.na { font-weight: 400; color: var(--muted); font-size: 13px; }
+    .row .flag { grid-column: 2 / 4; font-size: 12px; color: var(--ink-2); }
+    .row .flag::before { content: "⚠ "; }
+    .panel-close {
+      float: right; font: inherit; font-size: 13px; color: var(--ink-2); background: none;
+      border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; cursor: pointer;
+    }
+
+    /* Tooltip */
     .tooltip {
-      position: fixed; z-index: 10; pointer-events: none;
-      background: var(--surface); color: var(--ink);
-      border: 1px solid var(--border); border-radius: 8px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-      padding: 8px 10px; font-size: 13px; min-width: 140px;
-      opacity: 0; transition: opacity 80ms;
+      position: fixed; z-index: 10; pointer-events: none; max-width: 260px;
+      background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+      border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+      padding: 8px 10px; font-size: 13px; opacity: 0; transition: opacity 80ms;
     }
     .tooltip.on { opacity: 1; }
     .tooltip .value { font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
     .tooltip .value.na { font-size: 13px; font-weight: 500; color: var(--ink-2); }
-    .tooltip .place { color: var(--ink-2); }
+    .tooltip .where { color: var(--ink-2); }
+    .tooltip .flag { margin-top: 4px; font-size: 12px; color: var(--ink-2); }
 
-    .notes { margin-top: 12px; font-size: 12px; color: var(--ink-2); }
+    /* Table view */
+    details.table-view { margin-top: 16px; }
+    details.table-view > summary { cursor: pointer; font-weight: 600; font-size: 15px; }
+    .table-tools { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 12px 0 8px; font-size: 13px; color: var(--ink-2); }
+    .table-tools input {
+      font: inherit; font-size: 14px; color: var(--ink); background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; width: min(260px, 100%);
+    }
+    .table-scroll { max-height: 520px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th { position: sticky; top: 0; background: var(--surface-2); text-align: left; font-weight: 600; z-index: 1; }
+    th, td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    th button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+    td button { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-align: left; text-decoration: underline; text-underline-offset: 2px; }
+    td.na { color: var(--muted); }
+
+    .notes { margin-top: 16px; font-size: 12px; color: var(--ink-2); }
     .notes p { margin: 4px 0; }
-    .error { color: var(--ink); padding: 24px 0; }
+    .error { padding: 24px 0; }
   </style>
 </head>
 <body>
   <main>
-    <h1>Median household income by county</h1>
-    <p class="sub" id="period">Loading…</p>
+    <h1>Where US mortgage risk is building</h1>
+    <p class="lede">
+      Mortgage defaults usually need two things at once: a household that is stretched (a heavy payment burden or thin equity) and a shock such as a job loss.
+      These layers show where the first half is loaded, and where delinquency is already rising. They describe conditions; they don't predict defaults.
+      <a id="methodology-link" href="#">How each layer is calculated</a>.
+    </p>
 
-    <div class="card">
-      <div class="legend" aria-hidden="true">
-        <div class="legend-title" id="legend-title">Median household income</div>
-        <div class="legend-row">
+    <fieldset class="switcher" id="switcher">
+      <legend>Map layer</legend>
+    </fieldset>
+
+    <div class="layout">
+      <section class="card" aria-labelledby="layer-title">
+        <p class="layer-title" id="layer-title">Loading…</p>
+        <p class="layer-sub" id="layer-sub"></p>
+        <div class="legend" id="legend" aria-hidden="true">
           <div class="ramp">
             <div class="swatches" id="swatches"></div>
             <div class="ticks" id="ticks"></div>
+            <div class="ends" id="ends"></div>
+            <div class="legend-unit" id="legend-unit"></div>
           </div>
           <div class="na-key">
             <svg width="16" height="12"><rect width="16" height="12" fill="url(#na-hatch)"/></svg>
             Data not available
           </div>
         </div>
-      </div>
 
-      <div class="map-wrap" id="map"></div>
+        <div class="search">
+          <label for="county-search">Find a county</label>
+          <input id="county-search" list="county-list" placeholder="e.g. Pueblo, Colorado" autocomplete="off">
+          <datalist id="county-list"></datalist>
+          <span class="kbd-hint">Map keys: Tab to enter, arrow keys to move, Enter to open, Esc to close.</span>
+        </div>
 
-      <div class="notes">
-        <p>Counties without a Census estimate are shown as <strong>Data not available</strong>. Missing data is excluded, not estimated.</p>
-        <p id="source"></p>
+        <div id="map"></div>
+      </section>
+
+      <aside class="card panel" id="panel" aria-live="polite" aria-label="County details">
+        <p class="empty">Select a county (click, tap, search or use the keyboard) to see all of its measures together.</p>
+      </aside>
+    </div>
+
+    <details class="table-view card" id="table-view">
+      <summary>Table view: every county for the selected layer</summary>
+      <div class="table-tools">
+        <label for="table-filter">Filter</label>
+        <input id="table-filter" placeholder="County or state" autocomplete="off">
+        <span id="table-count"></span>
       </div>
+      <div class="table-scroll">
+        <table>
+          <caption class="visually-hidden" id="table-caption"></caption>
+          <thead>
+            <tr>
+              <th scope="col" aria-sort="ascending"><button data-sort="name">County</button></th>
+              <th scope="col"><button data-sort="state">State</button></th>
+              <th scope="col" class="num"><button data-sort="value" id="value-header">Value</button></th>
+              <th scope="col">Notes</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </details>
+
+    <div class="notes">
+      <p>Grey hatching means <strong>Data not available</strong>: the source doesn't publish that county, or its sample is too small (fewer than 30 loans or owner households). Missing data is excluded, not estimated.</p>
+      <p>Colors use fixed benchmark breaks, so a color means the same thing in every county. On two-sided scales, the blue end is "below threshold": lower than the benchmark, not "safe".</p>
+      <p id="sources"></p>
     </div>
   </main>
 
-  <div class="tooltip" id="tooltip" role="status" aria-live="polite"></div>
+  <div class="tooltip" id="tooltip" aria-hidden="true"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+  <script src="layers.js"></script>
   <script src="map.js"></script>
 </body>
 </html>
