@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>US Housing Map</title>
+  <meta name="description" content="Median household income by US county, from the Census American Community Survey.">
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #f9f9f7;
+      --surface: #fcfcfb;
+      --ink: #0b0b0b;
+      --ink-2: #52514e;
+      --muted: #898781;
+      --border: rgba(11, 11, 11, 0.10);
+      /* Sequential ramp, one hue (blue), light -> dark = low -> high. */
+      --seq-0: #cde2fb; --seq-1: #9ec5f4; --seq-2: #6da7ec; --seq-3: #3987e5;
+      --seq-4: #256abf; --seq-5: #184f95; --seq-6: #0d366b;
+      /* "Data not available": neutral grey + hatch, so it never reads as a low value. */
+      --na-fill: #e1e0d9;
+      --na-line: #b5b4ad;
+    }
+    /* Dark mode swaps the surfaces and ink only. The --seq ramp is deliberately
+       not overridden: light = low, dark = high in both modes. */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --page: #0d0d0d; --surface: #1a1a19;
+        --ink: #ffffff; --ink-2: #c3c2b7; --border: rgba(255, 255, 255, 0.10);
+        --na-fill: #2c2c2a; --na-line: #4a4a46;
+      }
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19;
+      --ink: #ffffff; --ink-2: #c3c2b7; --border: rgba(255, 255, 255, 0.10);
+      --na-fill: #2c2c2a; --na-line: #4a4a46;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    main { max-width: 1080px; margin: 0 auto; padding: 24px 16px 40px; }
+    h1 { font-size: 22px; line-height: 1.25; margin: 0 0 4px; font-weight: 650; }
+    .sub { color: var(--ink-2); margin: 0 0 16px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    /* Legend: 7 swatches with the threshold values under the boundaries. */
+    .legend { max-width: 460px; margin-bottom: 8px; }
+    .legend-title { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+    .legend-row { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+    .ramp { flex: 1 1 280px; }
+    .swatches { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; height: 12px; }
+    .swatches span { border-radius: 2px; }
+    .ticks { position: relative; height: 18px; font-size: 11px; color: var(--muted);
+             font-variant-numeric: tabular-nums; }
+    .ticks span { position: absolute; top: 3px; transform: translateX(-50%); white-space: nowrap; }
+    .na-key { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
+    .na-key svg { flex: none; border-radius: 2px; }
+
+    .map-wrap { position: relative; }
+    svg.map { display: block; width: 100%; height: auto; }
+    .counties path { cursor: default; }
+    .county-borders { fill: none; stroke: var(--surface); stroke-width: 0.25; stroke-linejoin: round; }
+    .state-borders { fill: none; stroke: var(--surface); stroke-width: 1; stroke-linejoin: round; }
+    .hover-outline { fill: none; stroke: var(--ink); stroke-width: 1.5; pointer-events: none; }
+
+    .tooltip {
+      position: fixed; z-index: 10; pointer-events: none;
+      background: var(--surface); color: var(--ink);
+      border: 1px solid var(--border); border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      padding: 8px 10px; font-size: 13px; min-width: 140px;
+      opacity: 0; transition: opacity 80ms;
+    }
+    .tooltip.on { opacity: 1; }
+    .tooltip .value { font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
+    .tooltip .value.na { font-size: 13px; font-weight: 500; color: var(--ink-2); }
+    .tooltip .place { color: var(--ink-2); }
+
+    .notes { margin-top: 12px; font-size: 12px; color: var(--ink-2); }
+    .notes p { margin: 4px 0; }
+    .error { color: var(--ink); padding: 24px 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Median household income by county</h1>
+    <p class="sub" id="period">Loading…</p>
+
+    <div class="card">
+      <div class="legend" aria-hidden="true">
+        <div class="legend-title" id="legend-title">Median household income</div>
+        <div class="legend-row">
+          <div class="ramp">
+            <div class="swatches" id="swatches"></div>
+            <div class="ticks" id="ticks"></div>
+          </div>
+          <div class="na-key">
+            <svg width="16" height="12"><rect width="16" height="12" fill="url(#na-hatch)"/></svg>
+            Data not available
+          </div>
+        </div>
+      </div>
+
+      <div class="map-wrap" id="map"></div>
+
+      <div class="notes">
+        <p>Counties without a Census estimate are shown as <strong>Data not available</strong>. Missing data is excluded, not estimated.</p>
+        <p id="source"></p>
+      </div>
+    </div>
+  </main>
+
+  <div class="tooltip" id="tooltip" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+  <script src="map.js"></script>
+</body>
+</html>
