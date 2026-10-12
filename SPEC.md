@@ -16,12 +16,12 @@ Phase 2 reframes the map around the **double trigger** model of mortgage default
 
 | Role | Layer | Source | Definition | Color scale |
 |---|---|---|---|---|
-| Outcome | Delinquency vs own baseline | CFPB | z-score of the latest 90+ day delinquency rate against the county's 2015–2019 mean and SD (DECISIONS 012) | Diverging, midpoint 0 |
+| Outcome | Delinquency vs own baseline | CFPB | z-score of the latest 90+ day delinquency rate against the county's 2017–2019 monthly mean and SD, SD floored at 0.2 points (DECISIONS 016) | Diverging, midpoint 0 |
 | Burden | Owner cost burden | ACS `B25091` | **Share** of owner-occupied units *with a mortgage* paying ≥ 30% of household income on owner costs (HUD cost-burdened line) | Diverging around the US share (28.1%); see METHODOLOGY.md for proposed breaks |
 | Burden | High-DTI loans | HMDA | % of 2025 qualifying loans with debt-to-income above 43% | Sequential warm |
 | Burden | Property tax burden | ACS | Median real estate taxes paid (`B25103_E001`) ÷ median household income of owner-occupied households (`B25119_E002`), as % | Sequential warm |
 | Equity | High-CLTV loans | HMDA | % of 2025 qualifying loans with combined loan-to-value above 90% | Sequential warm |
-| Context (click panel only) | Median household income (all households); median HMDA rate; permits per 1,000 households; severe cost burden (≥ 50%); loan count; median loan amount | ACS `B19013`; HMDA; BPS ÷ ACS `B11001_E001`; ACS `B25091` | as named | Neutral blue |
+| Context (click panel only) | Latest 90+ day delinquency rate and change vs 2017–2019 (pp); median household income (all households); median HMDA rate; permits per 1,000 households; severe cost burden (≥ 50%); loan count; median loan amount | CFPB; ACS `B19013`; HMDA; BPS ÷ ACS `B11001_E001`; ACS `B25091` | as named | Neutral blue |
 
 "Qualifying" HMDA loans are originated, home-purchase, first-lien, principal-residence loans, excluding open-end lines of credit and reverse mortgages (DECISIONS 013).
 
@@ -42,7 +42,7 @@ Definitions, caveats and proposed legend breaks for every layer are in **`METHOD
 - **HMDA suppression:** a metric is null where the county has fewer than 30 *valid* loans for that metric. `Exempt` and `NA` are dropped per field, so each metric has its own valid count. The threshold is configurable (`--min-loans`) and recorded in `meta.json`.
 - **Property tax burden:** labelled a "ratio of medians", not the median household's actual tax share. Top-coded counties (taxes ≥ $10,000) are flagged `topcoded`; their ratio is a lower bound.
 - **Permits:** labelled as permits, never as "starts".
-- **Delinquency z-score:** counties whose baseline SD is near zero are flagged, not shown as extreme (2c).
+- **Delinquency z-score:** the baseline SD is floored at 0.2 percentage points, so a single 0.1-point rounding step can't move z by more than 0.5. Counties where the floor applies are flagged `sd_floored`. The latest rate and its percentage-point change from the baseline mean go in the click panel.
 - Every layer shows its data period (e.g. "HMDA 2025") in the legend.
 
 ### Delivery: four PRs, each branched from an up-to-date `main`
@@ -50,7 +50,7 @@ Definitions, caveats and proposed legend breaks for every layer are in **`METHOD
 |---|---|---|
 | 2a | `phase-2a-hmda` | HMDA pipeline: loan count, median rate, DTI > 43% share, CLTV > 90% share, median loan amount |
 | 2b | `phase-2b-acs` | ACS burden layers: owner cost burden share (B25091), property tax % of income, permits per 1,000 households; `METHODOLOGY.md` |
-| 2c | `phase-2c-delinquency` | CFPB delinquency z-score against the 2015–2019 baseline |
+| 2c | `phase-2c-delinquency` | CFPB delinquency z-score against the 2017–2019 baseline, plus latest rate and pp change for the click panel |
 | 2d | `phase-2d-ui` | Grouped layer switcher, new scales, click panel with context metrics, keyboard access, table view |
 
 ## Architecture

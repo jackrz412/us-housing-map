@@ -31,6 +31,11 @@ LAYERS = {
     # BPS covers ~3,020 counties (those with permit-issuing places), so the
     # standard 3,000 floor would leave almost no margin.
     "permits_per_1000_hh": {"min_counties": 2900, "min": 0, "max": 500},
+    # CFPB publishes only ~500 counties (DECISIONS 007).
+    "cfpb_delinquency_90": {"min_counties": 450, "min": 0, "max": 20},
+    "cfpb_delinquency_change": {"min_counties": 450, "min": -10, "max": 10},
+    # With the SD floored at 0.2 points, |z| > 20 would need a 4-point move.
+    "cfpb_delinquency_z": {"min_counties": 450, "min": -20, "max": 20},
 }
 META_FIELDS = ["label", "source", "period", "legend_period", "source_url", "run_date"]
 
