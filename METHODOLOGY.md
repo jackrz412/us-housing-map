@@ -21,6 +21,7 @@ Update it in the same PR as any change to a definition, filter, threshold or cav
 | Small samples | Suppressed to `null` below 30 observations: 30 valid loans for HMDA metrics; 30 mortgaged owner households for ACS cost-burden shares. | `clean_hmda.py`, `clean_acs_burden.py` |
 | Reliability flags | Values shown but flagged in `meta.json` → `flags` (`low_reliability`, `topcoded`, `sd_floored`). Shown as a ⚠ caveat in the tooltip, click panel and table view. | `clean_acs_burden.py`, `clean_delinquency.py`, `site/map.js` |
 | Determinism | Re-running the pipeline on the same inputs produces byte-identical files. `run_date` only changes when a layer's data does. | `pipeline/output.py` |
+| Update cadence | Checked weekly. A layer updates only when its source file changes upstream (by Last-Modified date). Within a data year that means CFPB releases (every 4–8 months) and any source revisions. A **new data year** (ACS 5-year, HMDA, BPS annual) is not picked up automatically: the refresh opens a GitHub issue and the switch is a reviewed code change, since definitions can change between vintages. | `pipeline/refresh.py`, `refresh.yml` |
 | Not a prediction | Layers show conditions associated with mortgage risk (the double trigger: burden or thin equity, plus a shock). They don't forecast defaults for any county. | UI copy, 2d |
 
 ### Periods don't line up
@@ -159,3 +160,4 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
 | 2026-10-12 | 2b | Property tax burden divides by owner household income (B25119) instead of all-household income (B19013) (DECISIONS 015). |
 | 2026-10-12 | 2c | Delinquency baseline 2017–2019 with a 0.2-point SD floor, instead of 2015–2019 (DECISIONS 016). Latest rate and pp change added for the click panel. |
 | 2026-10-12 | 2d | Legend breaks adopted as proposed and implemented in `site/layers.js`. Per-county flags (`low_reliability`, `topcoded`, `sd_floored`) shown in the tooltip, click panel and table (DECISIONS 017). |
+| 2026-10-12 | 3 | Weekly refresh: layers update when their source changes; new data years are switched by hand (DECISIONS 018). |

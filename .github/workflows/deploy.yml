@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Called by refresh.yml after it commits new data. Its push uses the
+  # workflow's GITHUB_TOKEN, and GitHub doesn't let those pushes trigger
+  # other workflows, so the refresh calls this one directly.
+  workflow_call:
 
 # Pages deploys need these; nothing else is granted.
 permissions:
@@ -21,14 +25,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # Always build main's latest commit. When called from refresh.yml,
+      # github.sha is the commit the refresh *started* from, which doesn't
+      # include the data it just committed.
       - uses: actions/checkout@v7
+        with:
+          ref: main
 
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       # Validate the committed data before publishing it. The pipeline itself
-      # isn't re-run here; scheduled refresh is Phase 3.
+      # runs in refresh.yml.
       - name: Validate processed data
         run: python3 pipeline/validate.py
 

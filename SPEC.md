@@ -63,8 +63,10 @@ sources → pipeline/ (Python + DuckDB) → data/processed/*.json → site/ (D3 
 - **Output format:** one JSON per metric, shaped `{ "fips": value }` over every map county (`null` = not available), plus `meta.json` (source, dataset, period, run date, and suppression threshold where one applies).
 - **Front end:** D3 with a 2023-boundary counties TopoJSON (`@severo_bo/us-atlas-2023`, vendored into `site/`) and the `geoAlbersUsa` projection, which places Alaska and Hawaii as insets.
 - **Pipeline must be idempotent:** re-running it produces identical outputs.
+- **Refresh (Phase 3):** `.github/workflows/refresh.yml` runs weekly (Mondays 13:17 UTC) and on demand. `pipeline/refresh.py` HEAD-requests every source file, compares Last-Modified dates with the committed manifest `data/processed/sources.json`, re-downloads only what changed, and re-runs only the `clean_*.py` scripts that read it. If validation passes and data changed, the bot commits `data/processed/` to `main` and calls `deploy.yml`. Newer data years (ACS, HMDA, BPS) are reported as a GitHub issue and switched manually (DECISIONS 018).
+- **PR check:** PRs touching `pipeline/` rebuild every layer from fresh downloads on Linux and must reproduce the committed data byte for byte.
 
-## Validation (runs after every pipeline run)
+## Validation (runs after every pipeline run, and gates every refresh commit and deploy)
 - At least 3,000 counties with a value per county-level layer, except: CFPB delinquency, which only publishes ~500 counties (floor: 450); HMDA metrics after suppression (~2,650–2,750 counties; floor: 2,400). The count is printed every run.
 - Every data FIPS has a map shape (anti-join).
 - No FIPS outside the 50 states + DC (state FIPS `01`–`56`).

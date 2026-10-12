@@ -1,0 +1,110 @@
+name: Refresh data
+
+on:
+  # Weekly. Sources update every few weeks to months, and refresh.py only
+  # downloads what changed, so a quiet week costs a few HEAD requests.
+  schedule:
+    - cron: "17 13 * * 1" # Mondays 13:17 UTC
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Rebuild every layer from fresh downloads"
+        type: boolean
+        default: false
+  # On PRs that touch the pipeline: rebuild everything from scratch and
+  # require the result to match the committed data exactly. Nothing is
+  # committed or deployed from a PR.
+  pull_request:
+    paths:
+      - "pipeline/**"
+      - "requirements.txt"
+      - ".github/workflows/refresh.yml"
+
+permissions:
+  contents: read
+
+# Never run two refreshes at once; a second one waits.
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write # commit refreshed data to main
+      issues: write # report newer data years
+    outputs:
+      committed: ${{ steps.commit.outputs.committed }}
+    env:
+      IS_PR: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Refresh changed sources
+        run: |
+          FORCE=""
+          if [ "$IS_PR" = "true" ] || [ "${{ inputs.force }}" = "true" ]; then FORCE="--force"; fi
+          python pipeline/refresh.py $FORCE --summary "$GITHUB_STEP_SUMMARY" --vintages vintages.txt
+
+      # Fails the job (so nothing is committed or deployed) if any check fails.
+      - name: Validate
+        run: |
+          set -o pipefail
+          echo '### Validation' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          status=0
+          python pipeline/validate.py | tee -a "$GITHUB_STEP_SUMMARY" || status=$?
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+
+      # A full rebuild on a PR must reproduce the committed data byte for byte
+      # (SPEC: idempotent pipeline), including across macOS and Linux.
+      - name: Check rebuild matches committed data
+        if: env.IS_PR == 'true'
+        run: git diff --exit-code --stat -- data/processed
+
+      - name: Report newer data years
+        if: env.IS_PR != 'true' && hashFiles('vintages.txt') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Newer source data available"
+          if [ -z "$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[].number')" ]; then
+            { echo "The weekly refresh found a newer data year. Switching to it is a code change (year constants in pipeline/fetch_*.py), because table layouts and definitions can change between vintages."; echo; sed 's/^/- /' vintages.txt; } > body.md
+            gh issue create --title "$title" --body-file body.md
+          fi
+
+      - name: Commit refreshed data
+        id: commit
+        if: env.IS_PR != 'true' && github.ref == 'refs/heads/main'
+        run: |
+          git add data/processed
+          if git diff --cached --quiet; then
+            echo "No data changes."
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Data refresh $(date -u +%Y-%m-%d)" -m "$(git diff --cached --stat)"
+          git push
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: refresh
+    if: needs.refresh.outputs.committed == 'true'
+    uses: ./.github/workflows/deploy.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
