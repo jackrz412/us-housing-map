@@ -4,10 +4,10 @@
 // path generator -> one <path> per county, colored by a threshold scale.
 
 const MAP_URL = "geo/counties-10m.json";
-// The page reads the pipeline's output directly. Locally, serve the repo root
-// (python3 -m http.server) and open /site/.
-const DATA_URL = "../data/processed/income.json";
-const META_URL = "../data/processed/meta.json";
+// scripts/build_site.sh copies data/processed/ to ./data/ next to this page,
+// both for GitHub Pages and for local preview.
+const DATA_URL = "data/income.json";
+const META_URL = "data/meta.json";
 
 // Fixed drawing size. The SVG scales to its container through viewBox, so
 // these are coordinate units, not screen pixels. 975x610 is the aspect ratio
@@ -99,8 +99,9 @@ function draw(topo, income, meta) {
   const thresholds = [...new Set(
     d3.range(1, CLASSES).map((i) => Math.round(d3.quantileSorted(values, i / CLASSES) / 1000) * 1000)
   )];
-  // The range is CSS variables, not hex, so the ramp can flip in dark mode
-  // without redrawing. Each color is a step of one hue, light -> dark.
+  // The range is CSS variables, not hex, so colors come from the stylesheet.
+  // Each color is a step of one hue, light -> dark = low -> high, in both
+  // light and dark mode.
   const color = d3.scaleThreshold()
     .domain(thresholds)
     .range(d3.range(thresholds.length + 1).map((i) => `var(--seq-${i})`));

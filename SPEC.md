@@ -47,7 +47,7 @@ sources → pipeline/ (Python + DuckDB) → data/processed/*.json → site/ (D3 
 |---|---|---|
 | 0 | Data spike: pull one sample per source, document it in `DATA_SOURCES.md` | Each layer confirmed live with known lag, or relabeled or cut |
 | 1 | Median income layer end-to-end (DECISIONS 009) | Live URL with one working choropleth |
-| 2 | Remaining layers, layer switcher, county click panel | All 5 layers working |
+| 2 | Remaining layers, layer switcher, county click panel, keyboard access, table view | All 5 layers working; every county reachable by keyboard (focus shows the same tooltip and panel as hover/click); a table view lists every county's values for the active layer |
 | 3 | GitHub Actions scheduled refresh + validation | Unattended run passes |
 | 4 | Housing stress index + backtest | Write-up on the portfolio |
 

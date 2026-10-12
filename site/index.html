@@ -21,15 +21,13 @@
       --na-fill: #e1e0d9;
       --na-line: #b5b4ad;
     }
-    /* Dark mode flips the ramp's anchor: low values recede toward the dark
-       surface, high values get lighter. Same ramp, reversed. */
+    /* Dark mode swaps the surfaces and ink only. The --seq ramp is deliberately
+       not overridden: light = low, dark = high in both modes. */
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
         color-scheme: dark;
         --page: #0d0d0d; --surface: #1a1a19;
         --ink: #ffffff; --ink-2: #c3c2b7; --border: rgba(255, 255, 255, 0.10);
-        --seq-0: #0d366b; --seq-1: #184f95; --seq-2: #256abf; --seq-3: #3987e5;
-        --seq-4: #6da7ec; --seq-5: #9ec5f4; --seq-6: #cde2fb;
         --na-fill: #2c2c2a; --na-line: #4a4a46;
       }
     }
@@ -37,8 +35,6 @@
       color-scheme: dark;
       --page: #0d0d0d; --surface: #1a1a19;
       --ink: #ffffff; --ink-2: #c3c2b7; --border: rgba(255, 255, 255, 0.10);
-      --seq-0: #0d366b; --seq-1: #184f95; --seq-2: #256abf; --seq-3: #3987e5;
-      --seq-4: #6da7ec; --seq-5: #9ec5f4; --seq-6: #cde2fb;
       --na-fill: #2c2c2a; --na-line: #4a4a46;
     }
 
