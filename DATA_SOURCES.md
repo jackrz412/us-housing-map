@@ -52,7 +52,7 @@ Counts below exclude Puerto Rico.
   - `debt_to_income_ratio`: bins `<20%`, `20%-<30%`, `30%-<36%`; whole numbers `36`–`49`; bins `50%-60%`, `>60%`; plus `NA`, `Exempt`. "Above 43%" = `44`–`49`, `50%-60%`, `>60%`.
   - `interest_rate` and `combined_loan_to_value_ratio`: numeric strings, or `NA`/`Exempt`. Extremes exist (rates of 0% and 20%, CLTV up to 560). Medians and over-threshold shares are robust to them, so no trimming.
   - `county_code`: 5-digit string (new CT planning regions), or `NA` (5,261 qualifying loans, dropped).
-- **Pipeline results (2025, qualifying loans as defined in DECISIONS 013):** 2,988,847 loans, of which 16,041 are in territories or have county `NA` and are dropped. Counties surviving the 30-valid-loan suppression: rate 2,719, DTI 2,718, CLTV 2,645, loan amount 2,752 (of 3,144). Those counties hold 99.8% of the loans.
+- **Pipeline results (2025, qualifying loans as defined in DECISIONS 013):** 2,988,847 loans, of which 16,041 are in territories or have county `NA` and are dropped. Counties surviving the 30-valid-loan suppression: rate 2,719, DTI 2,718, CLTV 2,645 (2,331 once limited to conventional loans, DECISIONS 019), loan amount 2,752 (of 3,144). Those counties hold 99.8% of the loans.
 
 | Metric (county) | min | p25 | median | p75 | max |
 |---|---|---|---|---|---|

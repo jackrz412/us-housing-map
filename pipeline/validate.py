@@ -18,12 +18,16 @@ from geo import MAX_STATE_FIPS, PROCESSED_DIR, map_counties
 # ~2,650-2,750 counties (2025 Snapshot). Their floor of 2,400 sits ~10% under
 # that: a normal year passes, a broken filter or truncated download doesn't.
 HMDA_FLOOR = 2400
+# The CLTV share counts conventional loans only (DECISIONS 019), so fewer
+# counties reach 30 valid loans (~2,330); same ~10% margin.
+HMDA_CONV_FLOOR = 2100
 LAYERS = {
     "income": {"min_counties": 3000, "min": 5_000, "max": 500_000},
     "hmda_loans": {"min_counties": 3000, "min": 0, "max": 500_000},
     "hmda_rate": {"min_counties": HMDA_FLOOR, "min": 0, "max": 20},
     "hmda_dti_over_43": {"min_counties": HMDA_FLOOR, "min": 0, "max": 100},
-    "hmda_cltv_over_90": {"min_counties": HMDA_FLOOR, "min": 0, "max": 100},
+    "hmda_cltv_over_90": {"min_counties": HMDA_CONV_FLOOR, "min": 0, "max": 100},
+    "hmda_govt_share": {"min_counties": HMDA_FLOOR, "min": 0, "max": 100},
     "hmda_loan_amount": {"min_counties": HMDA_FLOOR, "min": 10_000, "max": 5_000_000},
     "acs_cost_burden": {"min_counties": 3000, "min": 0, "max": 100},
     "acs_cost_burden_severe": {"min_counties": 3000, "min": 0, "max": 100},
