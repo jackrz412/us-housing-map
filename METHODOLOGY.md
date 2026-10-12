@@ -19,7 +19,7 @@ Update it in the same PR as any change to a definition, filter, threshold or cav
 | Connecticut | The 9 planning regions (`09110`–`09190`) that replaced its 8 counties as county-equivalents in 2022. All sources use them. | map file (DECISIONS 008) |
 | Missing data | `null` in the layer file; grey hatch and "Data not available" on the map. **Never estimated, interpolated or zero-filled.** A true zero (e.g. 0 permits reported) is `0`, not `null`. | `clean_*.py`, UI |
 | Small samples | Suppressed to `null` below 30 observations: 30 valid loans for HMDA metrics; 30 mortgaged owner households for ACS cost-burden shares. | `clean_hmda.py`, `clean_acs_burden.py` |
-| Reliability flags | Values shown but flagged in `meta.json` → `flags` (e.g. `low_reliability`, `topcoded`). The click panel should show the caveat (UI, 2d). | `clean_acs_burden.py`, `validate.py` |
+| Reliability flags | Values shown but flagged in `meta.json` → `flags` (`low_reliability`, `topcoded`, `sd_floored`). Shown as a ⚠ caveat in the tooltip, click panel and table view. | `clean_acs_burden.py`, `clean_delinquency.py`, `site/map.js` |
 | Determinism | Re-running the pipeline on the same inputs produces byte-identical files. `run_date` only changes when a layer's data does. | `pipeline/output.py` |
 | Not a prediction | Layers show conditions associated with mortgage risk (the double trigger: burden or thin equity, plus a shock). They don't forecast defaults for any county. | UI copy, 2d |
 
@@ -56,7 +56,7 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
   - **Revisions:** each CFPB release revises the full history, so a county's baseline can shift slightly between releases. The pipeline always uses the newest release.
   - `FIPSCode` comes wrapped in literal quotes (`'01003'`), stripped by the pipeline.
   - Distribution (Dec 2025): p5 −2.05, p25 −1.01, median −0.10, p75 0.78, p95 2.24, max 5.60 (Pueblo County, CO).
-- **Proposed scale (2d):** diverging, midpoint 0; breaks −2, −1, −0.5 | 0.5, 1, 2. The cool end is labelled "below baseline", not "safe".
+- **Scale:** diverging, midpoint 0; breaks −2, −1, −0.5 | 0.5, 1, 2. The cool end is labelled "Below threshold" (here, the threshold is the county's own baseline), never "safe".
 
 ### Delinquency rate and change: `cfpb_delinquency_90`, `cfpb_delinquency_change` (click panel)
 - `cfpb_delinquency_90`: the latest month's 90+ day rate, % of mortgages (rounded to 0.1 by CFPB). Median county 0.9%.
@@ -78,7 +78,7 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
   - **Suppressed** where fewer than 30 mortgaged owner units have a computed burden (10 counties).
   - **Flagged `low_reliability`** where CV > 40%, or where the share is 0%, since a zero has no CV and only occurs in small counties (95 counties). The flag doesn't catch every outlier. Of the 21 counties above 50%, only 3 are flagged, e.g. Edwards County, TX (84%, 75 households). Zavala County, TX (68.3%, 757 households) is above 50% and not flagged.
   - **US benchmark:** 28.1% of mortgaged owners nationally (same table and vintage), recorded as `us_value` in `meta.json`.
-- **Proposed scale (2d):** diverging. Neutral class 25–30% contains the US share (28.1%); cool classes <15, 15–20, 20–25; warm classes 30–35, 35–40, ≥40. The cool end is labelled "below threshold", never "safe".
+- **Scale:** diverging. Neutral class 25–30% contains the US share (28.1%); cool classes <15, 15–20, 20–25; warm classes 30–35, 35–40, ≥40. The cool end is labelled "below threshold", never "safe".
 
 ### Mortgaged owners paying 50%+ of income: `acs_cost_burden_severe` (click-panel context)
 - As above, numerator `_E011` only (HUD "severely cost-burdened").
@@ -94,7 +94,7 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
   - **Strongly tied to loan type.** Nationally, 59% of FHA and 52% of VA qualifying loans are above 43% DTI, against 29% of conventional loans. A high county share partly reflects a high share of government-backed lending.
   - DTI is the lender's own calculation at origination, so methods vary somewhat between lenders.
   - **Suppressed** below 30 valid DTI values (2,718 counties kept).
-- **Proposed scale (2d):** sequential warm; breaks 20, 30, 40, 50%.
+- **Scale:** sequential warm; breaks 20, 30, 40, 50%.
 
 ### Property tax as % of owner income (ratio of medians): `acs_property_tax_income`
 - **Definition:** median real estate taxes paid (`B25103_E001`, owner-occupied units) ÷ median household income of owner-occupied households (`B25119_E002`) × 100.
@@ -105,7 +105,7 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
   - **Missing** in 8 counties, where either median is unpublished (e.g. Culberson County, TX `48109` has no owner-income estimate).
   - Taxes are as reported by respondents and include all property taxes on the home. They're not a statutory rate.
   - Distribution: p25 1.52%, median 2.12%, p75 2.86%, p90 3.70%.
-- **Proposed scale (2d):** sequential warm; breaks 1, 1.5, 2, 2.5, 3, 4%.
+- **Scale:** sequential warm; breaks 1, 1.5, 2, 2.5, 3, 4%.
 
 ---
 
@@ -119,7 +119,7 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
   - **Equity at origination only.** Price changes since purchase aren't reflected.
   - **`NA` is more common for CLTV** than for other fields (141k loans), so CLTV has the fewest surviving counties (2,645).
   - Extreme values (CLTV up to 560) exist in the raw data; a share-above-threshold is unaffected by them.
-- **Proposed scale (2d):** sequential warm; breaks 40, 50, 60, 70, 80%.
+- **Scale:** sequential warm; breaks 40, 50, 60, 70, 80%.
 
 ---
 
@@ -158,3 +158,4 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
 | 2026-10-12 | 2b | Sheet created. Owner cost burden switched from the B25092 median to the B25091 share at ≥30% (DECISIONS 014). |
 | 2026-10-12 | 2b | Property tax burden divides by owner household income (B25119) instead of all-household income (B19013) (DECISIONS 015). |
 | 2026-10-12 | 2c | Delinquency baseline 2017–2019 with a 0.2-point SD floor, instead of 2015–2019 (DECISIONS 016). Latest rate and pp change added for the click panel. |
+| 2026-10-12 | 2d | Legend breaks adopted as proposed and implemented in `site/layers.js`. Per-county flags (`low_reliability`, `topcoded`, `sd_floored`) shown in the tooltip, click panel and table (DECISIONS 017). |
