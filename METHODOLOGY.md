@@ -78,7 +78,7 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
   - **Suppressed** where fewer than 30 mortgaged owner units have a computed burden (10 counties).
   - **Flagged `low_reliability`** where CV > 40%, or where the share is 0%, since a zero has no CV and only occurs in small counties (95 counties). The flag doesn't catch every outlier. Of the 21 counties above 50%, only 3 are flagged, e.g. Edwards County, TX (84%, 75 households). Zavala County, TX (68.3%, 757 households) is above 50% and not flagged.
   - **US benchmark:** 28.1% of mortgaged owners nationally (same table and vintage), recorded as `us_value` in `meta.json`.
-- **Scale:** diverging. Neutral class 25–30% contains the US share (28.1%); cool classes <15, 15–20, 20–25; warm classes 30–35, 35–40, ≥40. The cool end is labelled "below threshold", never "safe".
+- **Scale:** diverging. Neutral class 25–30% contains the US share (28.1%); cool classes <15, 15–20, 20–25; warm classes 30–35, 35–40, ≥40. Because the midpoint is the US share rather than a fixed benchmark, the ends are labelled "Below US share" and "Above US share", never "safe".
 
 ### Mortgaged owners paying 50%+ of income: `acs_cost_burden_severe` (click-panel context)
 - As above, numerator `_E011` only (HUD "severely cost-burdened").

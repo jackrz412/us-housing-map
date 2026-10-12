@@ -33,7 +33,7 @@ Definitions, caveats and proposed legend breaks for every layer are in **`METHOD
 - **Discrete classes** via `d3.scaleThreshold` with **fixed benchmark breaks**, not quantiles, so a class means the same thing in every county and every data year (DECISIONS 011). Each layer's breaks, palette and role live in `site/layers.js` (presentation config, versioned with the page) and are shown in the legend (DECISIONS 017).
 - **One diverging palette** (blue → neutral grey → red/orange) and **one warm sequential ramp**, used map-wide. Both must be colorblind-safe, and **neighbouring classes must differ in lightness**, not only hue.
 - **Same color direction in light and dark mode.**
-- The cool end is labelled **"below threshold"**, never "safe".
+- The cool end is labelled **"Below threshold"** where the midpoint is a fixed benchmark (delinquency z = 0, the county's own baseline), and **"Below US share"** where the midpoint is the US share (owner cost burden). Never "safe". Sequential layers run "Lower" to "Higher".
 - Missing data keeps the **grey hatch** and "Data not available".
 - Context metrics appear only in the click panel, in neutral blue, never as a map layer.
 

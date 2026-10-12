@@ -60,6 +60,8 @@ const MAP_LAYERS = [
     tick: tick.z,
     unit: "Standard deviations from the county's 2017–2019 average",
     neutral: "−0.5 to +0.5: near baseline",
+    // Midpoint is a fixed benchmark (z = 0, the county's own baseline).
+    ends: ["Below threshold", "Above threshold"],
     format: fmt.z,
   },
   {
@@ -73,6 +75,8 @@ const MAP_LAYERS = [
     tick: tick.pct,
     unit: "% of owners with a mortgage",
     neutral: "25–30%: around the US share",
+    // Midpoint is the US share (28.1%), not a fixed benchmark.
+    ends: ["Below US share", "Above US share"],
     format: fmt.pct1,
   },
   {

@@ -155,7 +155,7 @@ function init(topo, meta, data) {
     .attr("aria-label", "County map. Tab to enter, arrow keys to move between counties, Enter to open details.");
 
   // Diagonal hatch for "Data not available". The legend swatch reuses it.
-  svg.append("defs").append("pattern")
+  const naHatch = svg.append("defs").append("pattern")
     .attr("id", "na-hatch")
     .attr("patternUnits", "userSpaceOnUse")
     .attr("width", 4).attr("height", 4)
@@ -179,7 +179,10 @@ function init(topo, meta, data) {
   // Keyboard access uses a "roving tabindex": exactly one county path has
   // tabindex=0 (the one Tab lands on); the rest have -1, so Tab enters and
   // leaves the map in one step instead of visiting 3,144 counties.
-  const countyPaths = svg.append("g").attr("class", "counties")
+  // Everything that pans and zooms lives in one group; d3.zoom moves it.
+  const viewport = svg.append("g").attr("class", "viewport");
+
+  const countyPaths = viewport.append("g").attr("class", "counties")
     .selectAll("path")
     .data(counties, (f) => f.id)
     .join("path")
@@ -187,11 +190,82 @@ function init(topo, meta, data) {
       .attr("role", "button")
       .attr("tabindex", -1);
 
-  svg.append("path").attr("class", "county-borders").attr("d", path(countyBorders));
-  svg.append("path").attr("class", "state-borders").attr("d", path(stateBorders));
-  const selectedHalo = svg.append("path").attr("class", "selected-outline-halo");
-  const selectedOutline = svg.append("path").attr("class", "selected-outline");
-  const hoverOutline = svg.append("path").attr("class", "hover-outline");
+  viewport.append("path").attr("class", "county-borders").attr("d", path(countyBorders));
+  viewport.append("path").attr("class", "state-borders").attr("d", path(stateBorders));
+  const selectedHalo = viewport.append("path").attr("class", "selected-outline-halo");
+  const selectedOutline = viewport.append("path").attr("class", "selected-outline");
+  const hoverOutline = viewport.append("path").attr("class", "hover-outline");
+
+  // --- Zoom and pan -----------------------------------------------------------------
+  // d3.zoom tracks a transform {k, x, y}: k is the scale factor, (x, y) the
+  // translation. A point p in map coordinates is drawn at k·p + (x, y). On
+  // every gesture d3 updates the transform and calls zoomed(), which writes it
+  // onto the viewport group as transform="translate(x,y) scale(k)". The paths
+  // themselves never change; only the group's transform does.
+  //
+  // Strokes are drawn in the group's coordinate system, so a scale of k would
+  // also multiply every border's width by k (a 1px state line becomes 8px at
+  // 8x). vector-effect: non-scaling-stroke (index.html CSS) tells the browser
+  // to apply the transform to the geometry but not to the stroke width, so
+  // borders and outlines stay the same thickness on screen at any zoom.
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const zoom = d3.zoom()
+    .scaleExtent([1, 8])
+    // extent = the viewport; translateExtent = the area the viewport may show.
+    // Making them equal means you can't pan past the map's edges, and at 1x
+    // there's nothing to pan.
+    .extent([[0, 0], [WIDTH, HEIGHT]])
+    .translateExtent([[0, 0], [WIDTH, HEIGHT]])
+    // A mouse that moves more than 4px between down and up is a drag: d3
+    // swallows the click that follows, so panning never selects a county.
+    .clickDistance(4)
+    // Which input starts a zoom gesture:
+    // - wheel only with Ctrl/Cmd held (trackpad pinch sends ctrlKey too), so
+    //   plain scrolling always scrolls the page;
+    // - touch only with two or more fingers, so one finger scrolls the page;
+    // - mouse with the primary button (not Ctrl-click, which is a right-click
+    //   on macOS).
+    .filter((event) => {
+      if (event.type === "wheel") return event.ctrlKey || event.metaKey;
+      if (event.type.startsWith("touch")) return event.touches.length >= 2;
+      return !event.button && !event.ctrlKey;
+    })
+    // d3's default speeds up only for ctrlKey; treat Cmd the same.
+    .wheelDelta((event) => -event.deltaY * (event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 0.002) * 10)
+    .on("zoom", zoomed);
+
+  svg.call(zoom)
+    // Double-click would both select a county and zoom; keep it to selecting.
+    .on("dblclick.zoom", null);
+
+  function zoomed({ transform }) {
+    viewport.attr("transform", transform);
+    // The hatch pattern is in the group's coordinates too, so it would grow
+    // with the zoom; scaling it by 1/k keeps it the same size on screen.
+    naHatch.attr("patternTransform", `scale(${1 / transform.k}) rotate(45)`);
+    // A pointer tooltip would now point at the wrong place, so hide it; a
+    // keyboard-focused county keeps its tooltip, re-anchored to where it moved.
+    const focused = document.activeElement;
+    if (focused?.closest?.(".counties")) showTipAtElement(d3.select(focused).datum());
+    else hideTip();
+  }
+
+  const animate = (sel) => (reduceMotion ? sel : sel.transition().duration(250));
+  document.getElementById("zoom-in").addEventListener("click", () => animate(svg).call(zoom.scaleBy, 1.5));
+  document.getElementById("zoom-out").addEventListener("click", () => animate(svg).call(zoom.scaleBy, 1 / 1.5));
+  document.getElementById("zoom-reset").addEventListener("click", () => animate(svg).call(zoom.transform, d3.zoomIdentity));
+
+  // When zoomed in, keep the keyboard-focused or searched-for county on
+  // screen by panning to it (the scale stays the same).
+  function ensureVisible(fips) {
+    const t = d3.zoomTransform(svg.node());
+    if (t.k === 1) return;
+    const [x, y] = t.apply(centroid.get(fips));
+    const margin = 40;
+    if (x < margin || x > WIDTH - margin || y < margin || y > HEIGHT - margin) {
+      animate(svg).call(zoom.translateTo, ...centroid.get(fips));
+    }
+  }
 
   const pathById = new Map();
   countyPaths.each(function (f) { pathById.set(f.id, this); });
@@ -259,7 +333,7 @@ function init(topo, meta, data) {
     .on("pointermove", (event) => placeTip(event.clientX, event.clientY))
     .on("pointerleave", () => { if (document.activeElement?.closest?.(".counties") == null) hideTip(); })
     .on("click", (event, f) => { setRoving(f.id); select(f.id); showTip(f, event.clientX, event.clientY); })
-    .on("focus", (event, f) => { setRoving(f.id); showTipAtElement(f); })
+    .on("focus", (event, f) => { setRoving(f.id); ensureVisible(f.id); showTipAtElement(f); })
     .on("blur", hideTip)
     .on("keydown", (event, f) => {
       const dir = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] }[event.key];
@@ -315,6 +389,7 @@ function init(topo, meta, data) {
   function goToCounty(fips) {
     select(fips);
     setRoving(fips);
+    ensureVisible(fips);
     const el = pathById.get(fips);
     el.scrollIntoView({ block: "center", behavior: "smooth" });
     el.focus({ preventScroll: true });
@@ -411,9 +486,9 @@ function init(topo, meta, data) {
       s.textContent = layer.tick(b);
       return s;
     }));
-    const [lo, hi] = layer.scale === "diverging"
-      ? ["◀ Below threshold", "Above threshold ▶"]
-      : ["◀ Lower", "Higher ▶"];
+    // Diverging layers name their midpoint (layers.js: a benchmark vs the US
+    // share); sequential layers just run low to high.
+    const [lo, hi] = (layer.ends ?? ["Lower", "Higher"]).map((t, i) => (i ? `${t} ▶` : `◀ ${t}`));
     const ends = document.getElementById("ends");
     ends.replaceChildren(...[lo, hi].map((t) => {
       const s = document.createElement("span");
