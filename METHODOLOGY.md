@@ -90,14 +90,16 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
   - **Suppressed** below 30 valid DTI values (2,718 counties kept).
 - **Proposed scale (2d):** sequential warm; breaks 20, 30, 40, 50%.
 
-### Property tax as % of income (ratio of medians): `acs_property_tax_income`
-- **Definition:** median real estate taxes paid (`B25103_E001`, all owner-occupied units) ÷ median household income (`B19013_E001`, all households) × 100.
+### Property tax as % of owner income (ratio of medians): `acs_property_tax_income`
+- **Definition:** median real estate taxes paid (`B25103_E001`, owner-occupied units) ÷ median household income of owner-occupied households (`B25119_E002`) × 100.
 - **Nuances:**
-  - **A ratio of medians,** not the median household's tax share. Label it that way (SPEC).
-  - **Mismatched universes.** Taxes are for owner-occupied units, but income is for all households, including renters, who typically earn less. This tends to *overstate* owners' tax burden, most where renters are a large share. The owner-only alternative is `B25119_E002` (median income of owner-occupied households); not used, per the 2b spec.
-  - **Top-coded.** B25103 publishes medians of $10,000 or more as `10001`. For those 17 counties the ratio is a **lower bound**, flagged `topcoded`.
+  - **A ratio of medians,** not the median owner's tax share. The median-tax home and the median-income owner are generally different households. Label it that way (SPEC).
+  - **Owner-only on both sides** (DECISIONS 015). An earlier version divided by all-household income (`B19013`), which includes renters, who typically earn less. That overstated owners' burden: the owner-only ratio is about 14% lower at the county median (2.12% vs 2.46%; p10–p90 of new ÷ old: 0.76–0.93), and the maximum falls from 12.4% to 7.7%.
+  - **Top-coded taxes.** B25103 publishes medians of $10,000 or more as `10001`. For those 17 counties the ratio is a **lower bound**, flagged `topcoded`. Owner income (`B25119`) is top-coded at $250,000+, but no county reaches it (max $228,060).
+  - **Missing** in 8 counties, where either median is unpublished (e.g. Culberson County, TX `48109` has no owner-income estimate).
   - Taxes are as reported by respondents and include all property taxes on the home. They're not a statutory rate.
-- **Proposed scale (2d):** sequential warm; breaks 1, 2, 3, 4, 5%.
+  - Distribution: p25 1.52%, median 2.12%, p75 2.86%, p90 3.70%.
+- **Proposed scale (2d):** sequential warm; breaks 1, 1.5, 2, 2.5, 3, 4%.
 
 ---
 
@@ -148,3 +150,4 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
 | Date | PR | Change |
 |---|---|---|
 | 2026-10-12 | 2b | Sheet created. Owner cost burden switched from the B25092 median to the B25091 share at ≥30% (DECISIONS 014). |
+| 2026-10-12 | 2b | Property tax burden divides by owner household income (B25119) instead of all-household income (B19013) (DECISIONS 015). |

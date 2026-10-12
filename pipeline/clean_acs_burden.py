@@ -5,7 +5,7 @@ Outputs in data/processed/, each {fips: value} over every in-scope map county:
                                household income on owner costs (B25091)
   acs_cost_burden_severe.json  same, >= 50% (click-panel context)
   acs_property_tax_income.json median real estate taxes paid / median
-                               household income, % (B25103 / B19013)
+                               owner household income, % (B25103 / B25119)
 
 Per-county reliability flags (high CV, top-coded taxes) go in meta.json.
 See METHODOLOGY.md for definitions and caveats.
@@ -70,7 +70,7 @@ def build():
     shapes = map_counties()
     b25091 = read_table("b25091")
     b25103 = read_table("b25103")
-    b19013 = read_table("b19013")
+    b25119 = read_table("b25119")
 
     layers = {"acs_cost_burden": {}, "acs_cost_burden_severe": {},
               "acs_property_tax_income": {}}
@@ -91,11 +91,14 @@ def build():
             if share_cv is None or share_cv > LOW_RELIABILITY_CV:
                 flags[name].setdefault("low_reliability", []).append(fips)
 
-        # Property tax burden: a ratio of two medians from different universes
-        # (taxes: owner-occupied units; income: all households). See
-        # METHODOLOGY.md. It is not any household's actual tax share.
+        # Property tax burden: a ratio of two medians over the same universe,
+        # owner-occupied households. Taxes (B25103_E001) and income
+        # (B25119_E002, owner-occupied) both describe owners. Using all-household
+        # income (B19013) instead would mix in renters, who typically earn less,
+        # and overstate owners' burden (DECISIONS 015). It is still a ratio of
+        # medians, not any household's actual tax share. See METHODOLOGY.md.
         tax = b25103.get(fips, {}).get("B25103_E001")
-        income = b19013.get(fips, {}).get("B19013_E001")
+        income = b25119.get(fips, {}).get("B25119_E002")
         if tax is None or not income:
             layers["acs_property_tax_income"][fips] = None
         else:
@@ -150,11 +153,12 @@ def meta_entries(flags, us_share):
         },
         "acs_property_tax_income": {
             **common, **src("b25103"),
-            "label": "Property tax as % of income (ratio of medians)",
+            "label": "Property tax as % of owner income (ratio of medians)",
             "source": "US Census Bureau, American Community Survey 5-year estimates, "
-                      "tables B25103 and B19013",
+                      "tables B25103 and B25119",
             "definition": "Median real estate taxes paid (owner-occupied units, B25103) "
-                          "divided by median household income (all households, B19013)",
+                          "divided by median household income of owner-occupied "
+                          "households (B25119)",
             "flags": flags["acs_property_tax_income"],
         },
     }

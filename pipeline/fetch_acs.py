@@ -20,6 +20,7 @@ TABLES = [
     "b25091",  # mortgage status by owner costs as % of household income (distribution)
     "b25103",  # median real estate taxes paid, by mortgage status
     "b11001",  # households (total)
+    "b25119",  # median household income by tenure (owner / renter)
 ]
 
 URL = (

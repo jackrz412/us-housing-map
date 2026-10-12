@@ -19,9 +19,9 @@ Phase 2 reframes the map around the **double trigger** model of mortgage default
 | Outcome | Delinquency vs own baseline | CFPB | z-score of the latest 90+ day delinquency rate against the county's 2015–2019 mean and SD (DECISIONS 012) | Diverging, midpoint 0 |
 | Burden | Owner cost burden | ACS `B25091` | **Share** of owner-occupied units *with a mortgage* paying ≥ 30% of household income on owner costs (HUD cost-burdened line) | Diverging around the US share (28.1%); see METHODOLOGY.md for proposed breaks |
 | Burden | High-DTI loans | HMDA | % of 2025 qualifying loans with debt-to-income above 43% | Sequential warm |
-| Burden | Property tax burden | ACS | Median real estate taxes paid (`B25103_E001`) ÷ median household income (`B19013_E001`), as % | Sequential warm |
+| Burden | Property tax burden | ACS | Median real estate taxes paid (`B25103_E001`) ÷ median household income of owner-occupied households (`B25119_E002`), as % | Sequential warm |
 | Equity | High-CLTV loans | HMDA | % of 2025 qualifying loans with combined loan-to-value above 90% | Sequential warm |
-| Context (click panel only) | Median household income; median HMDA rate; permits per 1,000 households; severe cost burden (≥ 50%); loan count; median loan amount | ACS `B19013`; HMDA; BPS ÷ ACS `B11001_E001`; ACS `B25091` | as named | Neutral blue |
+| Context (click panel only) | Median household income (all households); median HMDA rate; permits per 1,000 households; severe cost burden (≥ 50%); loan count; median loan amount | ACS `B19013`; HMDA; BPS ÷ ACS `B11001_E001`; ACS `B25091` | as named | Neutral blue |
 
 "Qualifying" HMDA loans are originated, home-purchase, first-lien, principal-residence loans, excluding open-end lines of credit and reverse mortgages (DECISIONS 013).
 
