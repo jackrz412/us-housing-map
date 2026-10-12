@@ -1,0 +1,51 @@
+# Decisions
+
+Each entry: the decision, the alternatives, and why. Newest at the bottom.
+
+## 001 — County as the unit of analysis (2026-10-06)
+- **Chose:** county (FIPS) grain; counties without data are excluded with a note.
+- **Over:** state (too coarse) or metro area (doesn't cover rural areas).
+- **Why:** county is the finest grain where most federal housing data is published.
+
+## 002 — Property tax only for "tax burden" in v1 (2026-10-12)
+- **Chose:** effective property tax rate from ACS (median taxes ÷ median home value).
+- **Over:** a composite of property tax plus state income and sales tax burden.
+- **Why:** property tax is the only tax measure published at county level. The composite mixes state-level and county-level data and would need weighting choices that are hard to defend. Revisit after v1.
+
+## 003 — HMDA county median for mortgage rates (2026-10-12)
+- **Chose:** median `interest_rate` from HMDA originations, computed per county.
+- **Over:** Freddie Mac PMMS, which is a single weekly national number.
+- **Why:** HMDA shows real geographic variation in rates.
+- **Cost accepted:** about one year of data lag, very large files (handled with DuckDB), and suppression of small-sample counties.
+
+## 004 — D3 + TopoJSON for the map (2026-10-12)
+- **Chose:** D3 with `us-atlas` TopoJSON, rendered as SVG.
+- **Over:** MapLibre GL, a tile-based map with smooth zoom and pan.
+- **Why:** it needs no tile server or API key, the files are small, and it teaches the underlying mechanics of projections, scales, and data joins. A county choropleth doesn't need street-level zoom.
+
+## 005 — Building permits as the proxy for housing starts (2026-10-12)
+- **Chose:** Census Building Permits Survey, at county level.
+- **Over:** Census New Residential Construction (starts), which is published only nationally and for 4 regions.
+- **Why:** permits lead starts closely and exist at county level. Labeled honestly as permits.
+
+## 006 — 50 states + DC only; Puerto Rico excluded (2026-10-12)
+- **Chose:** keep only counties in the 50 states and DC (3,144). Drop Puerto Rico (`72xxx`) and other territories from every layer and from the map.
+- **Over:** including Puerto Rico's 78 municipios, which ACS and the map file both carry.
+- **Why:** the project focuses on US states. `geoAlbersUsa` doesn't draw Puerto Rico anyway, and CFPB and Building Permits don't cover it, so it would be a partial layer.
+
+## 007 — Keep CFPB delinquency at county level despite ~500 counties (2026-10-12)
+- **Chose:** keep the layer. The ~2,640 counties CFPB doesn't publish are greyed out and labelled "Data not available".
+- **Over:** switching to CFPB's metro/non-metro file (full coverage but not county values), or cutting the layer.
+- **Why:** it's the only free county-level delinquency source, and the counties it covers hold most mortgages. CFPB publishes a county only if it has ≥1,000 mortgages in their sample.
+- **Cost accepted:** the map is mostly grey outside metro areas. The ≥3,000-county validation rule gets a layer-specific floor of 450.
+
+## 008 — 2023-boundary TopoJSON instead of us-atlas 3.0.1 (2026-10-12)
+- **Chose:** `@severo_bo/us-atlas-2023` (2023 Census cartographic boundaries, same layout as `us-atlas`), vendored into the repo.
+- **Over:** `us-atlas@3.0.1` (2017 boundaries), or building our own from Census 2025 boundary files now.
+- **Why:** `us-atlas` has Connecticut's old counties and a pre-2019 Alaska split, so all of CT would be grey. The 2023 file matches every source's FIPS exactly. Building from the 2025 Census files remains the fallback if the fork goes away or boundaries change.
+
+## 009 — Median income as the Phase 1 layer (2026-10-12)
+- **Chose:** build median household income (ACS B19013) end-to-end first.
+- **Over:** CFPB delinquency, the original Phase 1 layer.
+- **Why:** income covers 3,143 of 3,144 counties, so it tests the full pipeline, validation and map against a complete layer. Delinquency covers ~500 counties and would mostly exercise the "Data not available" path.
+- **Note:** the ACS scripts use only the Python standard library. The summary file is 18 MB and needs a filter, not a query. DuckDB comes in with HMDA, where the 737 MB file needs it.
