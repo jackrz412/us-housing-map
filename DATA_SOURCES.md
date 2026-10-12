@@ -14,7 +14,7 @@ Counts below exclude Puerto Rico.
 | Layer | Latest period | Published | Lag | Counties | Status |
 |---|---|---|---|---|---|
 | Mortgage delinquency (CFPB) | Dec 2025 | Aug 2026 | ~8 months | **507** | ✅ Kept. Other ~2,640 counties show "Data not available" |
-| Median mortgage rate (HMDA) | 2025 | Jun 2026 | ~6 months after year end | 3,000+ before suppression (not yet measured) | ✅ Live |
+| Median mortgage rate (HMDA) | 2025 | Jun 2026 | ~6 months after year end | 2,645–2,752 after 30-loan suppression | ✅ Live (pipeline built in 2a) |
 | Building permits (Census BPS) | 2025 annual (Jan–Aug 2026 YTD also available) | May 2026 | ~4.5 months (annual); ~1 month (monthly YTD) | 3,024 | ✅ Live |
 | Property tax ratio (ACS 5-yr) | 2020–2024 | Jan 2026 | ~13 months | 3,144 (3,135 with both values) | ✅ Live |
 | Median income (ACS 5-yr) | 2020–2024 | Jan 2026 | ~13 months | 3,144 (3,143 with a value) | ✅ Live |
@@ -38,18 +38,28 @@ Counts below exclude Puerto Rico.
 - **Coverage:** **507 counties** across 50 states (no Puerto Rico in this file). CFPB only publishes a county "if there are at least 1,000 mortgages in our sample" (their sample is the NMDB, roughly 5% of mortgages). That covers most of the population but only about 16% of counties.
 - **Decision (DECISIONS 007):** keep the layer at county level. The other ~2,640 counties show "Data not available". The spec's ≥3,000 validation rule can't apply to this layer, so it needs its own floor (e.g. ≥450, to catch a broken download without failing on normal release-to-release changes).
 
-## 2. Median mortgage rate: HMDA (FFIEC)
+## 2. HMDA loan-level data (FFIEC)
 
 - **Data Browser API (small samples):** `https://ffiec.cfpb.gov/v2/data-browser-api/view/csv?years=2025&counties=01001&actions_taken=1&loan_purposes=1`. It answers with a redirect to a pre-built file on `files.ffiec.cfpb.gov`, so use `curl -L`. Responses are gzip-encoded (`--compressed`).
-- **Full national file:** `https://files.ffiec.cfpb.gov/static-data/snapshot/2025/2025_public_lar_csv.zip` (737 MB zipped, `Last-Modified: 2026-06-23`).
+- **Full national file (used by the pipeline):** `https://files.ffiec.cfpb.gov/static-data/snapshot/2025/2025_public_lar_csv.zip`. 737 MB zipped (`Last-Modified: 2026-06-23`), one 5.1 GB CSV with 99 columns.
 - **Latest period:** **2025** (Snapshot dataset). 2026 data won't appear until about mid-2027. The API rejects `years=2026`.
-- **Dataset types:** 2025 is currently served as the **Snapshot**. 2024 is served from the **One-Year** dataset, a later re-cut that includes resubmissions. Pin one type and record it in `meta.json`. Snapshot is the only option for the newest year.
-- **Sample (Autauga County AL, 01001, 2025, originated home-purchase):** 856 rows, 99 columns. 813 first-lien (`lien_status=1`). Of those, 800 have a numeric `interest_rate`. **Median 6.5%**, range 2.25–12.25.
-- **Gotchas:**
-  - `interest_rate` can be `Exempt` (small-volume lenders under the EGRRCPA partial exemption) or `NA`. Exclude both before taking the median and before counting toward the n≥30 threshold. In the sample that removed 13 of 813 rows (1.6%).
-  - `county_code` is already a 5-digit zero-padded string. `state_code` is the postal abbreviation.
-  - The API only allows two filter criteria on the `aggregations` endpoint, so it can't produce medians. Medians need the loan-level file in DuckDB, as DECISIONS 003 assumed.
-- **Not yet measured:** how many counties survive the n≥30 suppression. That needs the full file. Do it in Phase 2.
+- **Dataset types:** 2025 is currently served as the **Snapshot**. 2024 is served from the **One-Year** dataset, a later re-cut that includes resubmissions. The pipeline pins Snapshot and records it in `meta.json` (`"dataset": "Snapshot 2025"`).
+- **Coded values (from the full 2025 file, home-purchase first liens):**
+  - `occupancy_type`: 1 principal residence (3.0M), 2 second home (93k), 3 investment (347k).
+  - `open_end_line_of_credit`: 1 open-end (21k), 2 not (3.3M), 1111 exempt (113k). `reverse_mortgage`: 1 reverse (1.6k), 2 not, 1111 exempt (113k).
+  - `debt_to_income_ratio`: bins `<20%`, `20%-<30%`, `30%-<36%`; whole numbers `36`–`49`; bins `50%-60%`, `>60%`; plus `NA`, `Exempt`. "Above 43%" = `44`–`49`, `50%-60%`, `>60%`.
+  - `interest_rate` and `combined_loan_to_value_ratio`: numeric strings, or `NA`/`Exempt`. Extremes exist (rates of 0% and 20%, CLTV up to 560). Medians and over-threshold shares are robust to them, so no trimming.
+  - `county_code`: 5-digit string (new CT planning regions), or `NA` (5,261 qualifying loans, dropped).
+- **Pipeline results (2025, qualifying loans as defined in DECISIONS 013):** 2,988,847 loans, of which 16,041 are in territories or have county `NA` and are dropped. Counties surviving the 30-valid-loan suppression: rate 2,719, DTI 2,718, CLTV 2,645, loan amount 2,752 (of 3,144). Those counties hold 99.8% of the loans.
+
+| Metric (county) | min | p25 | median | p75 | max |
+|---|---|---|---|---|---|
+| Median rate (%) | 5.5 | 6.49 | 6.5 | 6.625 | 9.785 |
+| Loans with DTI > 43% (%) | 7.9 | 28.2 | 33.3 | 39.0 | 62.3 |
+| Loans with CLTV > 90% (%) | 0.8 | 49.5 | 58.8 | 66.7 | 93.5 |
+| Median loan amount ($) | 95,000 | 175,000 | 225,000 | 295,000 | 1,115,000 |
+
+- **Performance:** one DuckDB pass over the 5.1 GB CSV takes ~4 s warm and ~40 s cold on a 10-core Mac, with an 8 GB memory cap.
 
 ## 3. Building permits: Census Building Permits Survey
 
