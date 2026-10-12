@@ -44,17 +44,23 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
 
 ## Outcome
 
-### Delinquency vs the county's own baseline (planned, 2c)
-- **Definition:** z-score = (latest 90+ day delinquency rate − county's 2015–2019 monthly mean) ÷ county's 2015–2019 monthly SD.
-- **Source:** CFPB Mortgage Performance Trends, county file, 90+ days delinquent.
+### Delinquency vs the county's own baseline: `cfpb_delinquency_z`
+- **Definition:** z = (latest 90+ day delinquency rate − county's 2017–2019 monthly mean) ÷ max(county's 2017–2019 monthly SD, 0.2). The SD is the sample SD over 36 months.
+- **Source:** CFPB Mortgage Performance Trends, county file, % of mortgages 90+ days delinquent. Latest month Dec 2025 (release thru-2025-12, published Aug 2026).
+- **Reading it:** z = +2 means this county's delinquency is now two of its own pre-pandemic standard deviations above its own pre-pandemic average. It measures *change relative to the county's normal*, not the level. A county can have a high z at a low rate, or the reverse; the click panel shows the rate and change alongside.
 - **Nuances:**
-  - **Coverage:** CFPB publishes a county only if it has ≥1,000 mortgages in its sample (the National Mortgage Database, ~5% of mortgages), about 500 counties. All others are "Data not available" (DECISIONS 007).
-  - **Baseline window:** 2015–2019 avoids the foreclosure-crisis backlog and the 2020–2021 forbearance period, when missed payments often weren't reported as delinquent (DECISIONS 012).
-  - **Near-zero baseline SD** inflates z. These counties are flagged, not shown as extreme. The cutoff is set in 2c.
-  - **Revisions:** each CFPB release revises the full history, so a county's baseline can shift slightly between releases.
-  - Values are rounded to 0.1 percentage points in the source, which limits precision for low-delinquency counties.
-  - `FIPSCode` comes wrapped in literal quotes (`'01003'`) and must be stripped.
-- **Proposed scale (2d):** diverging, midpoint 0; breaks −2, −1, −0.5 | 0.5, 1, 2.
+  - **Coverage:** CFPB publishes a county only if it has ≥1,000 mortgages in its sample (the National Mortgage Database, ~5% of mortgages): 507 counties. All others are "Data not available" (DECISIONS 007).
+  - **Why 2017–2019, not 2015–2019** (DECISIONS 016). Delinquency was still falling from the foreclosure crisis through 2015–2016 (national 1.6% at end-2015, 1.1% at end-2017, 0.9% at end-2019). With 2015–2019, each county's baseline mean and SD were inflated by that tail: the median county scored z = −0.69 and 186 of 507 were ≤ −1. With 2017–2019, the median is −0.10 (98 counties ≥ +1, 132 ≤ −1). Some decline remains inside 2017–2019 (median −0.14 points/year), so z still leans slightly negative.
+  - **Why not 2020 onward:** CARES Act forbearance kept many missed payments from being reported as delinquent, so 2020–2021 understates stress.
+  - **SD floor of 0.2 points.** CFPB rounds to 0.1 points, and many counties' baseline SDs are close to that resolution (as low as 0.03). Unfloored, one rounding step could swing z by about 3. The floor caps a single 0.1-point step at 0.5 z, the narrowest legend class. It applies to **223 of 507 counties** (flagged `sd_floored`). For them, z understates how unusual a move is relative to their true (very stable) baseline: it's conservative by design.
+  - **Revisions:** each CFPB release revises the full history, so a county's baseline can shift slightly between releases. The pipeline always uses the newest release.
+  - `FIPSCode` comes wrapped in literal quotes (`'01003'`), stripped by the pipeline.
+  - Distribution (Dec 2025): p5 −2.05, p25 −1.01, median −0.10, p75 0.78, p95 2.24, max 5.60 (Pueblo County, CO).
+- **Proposed scale (2d):** diverging, midpoint 0; breaks −2, −1, −0.5 | 0.5, 1, 2. The cool end is labelled "below baseline", not "safe".
+
+### Delinquency rate and change: `cfpb_delinquency_90`, `cfpb_delinquency_change` (click panel)
+- `cfpb_delinquency_90`: the latest month's 90+ day rate, % of mortgages (rounded to 0.1 by CFPB). Median county 0.9%.
+- `cfpb_delinquency_change`: latest rate minus the county's 2017–2019 mean, in percentage points (median −0.02; p5–p95 −0.68 to +0.53). Unlike z, it isn't scaled by the county's volatility, so it's the easier number to read in the panel: "0.4 points above its 2017–19 average".
 
 ---
 
@@ -151,3 +157,4 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
 |---|---|---|
 | 2026-10-12 | 2b | Sheet created. Owner cost burden switched from the B25092 median to the B25091 share at ≥30% (DECISIONS 014). |
 | 2026-10-12 | 2b | Property tax burden divides by owner household income (B25119) instead of all-household income (B19013) (DECISIONS 015). |
+| 2026-10-12 | 2c | Delinquency baseline 2017–2019 with a 0.2-point SD floor, instead of 2015–2019 (DECISIONS 016). Latest rate and pp change added for the click panel. |

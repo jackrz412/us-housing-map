@@ -63,6 +63,7 @@ Each entry: the decision, the alternatives, and why. Newest at the bottom.
 - **Cost accepted:** a layer can bunch into one or two classes when the data sits far from the benchmark (see the owner cost burden open question in SPEC).
 
 ## 012 — Delinquency baseline window: 2015–2019 (2026-10-12)
+- **Superseded by 016:** 2015–2019 turned out to be dominated by the post-crisis decline.
 - **Chose:** score each county's latest 90+ day delinquency rate as a z-score against that county's own monthly mean and SD over 2015–2019.
 - **Over:** a national benchmark (hides structural differences between counties), the full 2008–present history (dominated by the foreclosure crisis), or a window including 2020–2021.
 - **Why:** by 2015 the foreclosure-crisis backlog had largely cleared. From 2020, CARES Act forbearance kept many missed payments from being reported as delinquent, so 2020–2021 understates stress. 2015–2019 is the most recent "normal" stretch.
@@ -86,3 +87,12 @@ Each entry: the decision, the alternatives, and why. Newest at the bottom.
 - **Over:** ÷ median household income of all households (B19013), as first specified for 2b.
 - **Why:** property taxes are paid by owners, so the income should be owners' too. All-household income includes renters, who typically earn less, which overstated the burden. The owner-only ratio is ~14% lower at the county median (2.12% vs 2.46%) and its maximum falls from 12.4% to 7.7%.
 - **Cost accepted:** one more ACS table. Coverage is unchanged at 3,136 counties: De Baca County, NM gains a value and Culberson County, TX loses one.
+
+## 016 — Delinquency baseline: 2017–2019 with a 0.2-point SD floor (2026-10-12)
+- **Chose:** score the latest 90+ day rate against each county's 2017–2019 monthly mean and SD (36 months), with the SD floored at 0.2 percentage points. Counties where the floor applies are flagged `sd_floored`. Also output the latest rate and the percentage-point change from the baseline mean, for the click panel.
+- **Over:** 2015–2019 (DECISIONS 012); 2018–2019; a percentage-point change with no z-score.
+- **Why:**
+  - **The trend problem with 2015–2019.** Delinquency was still falling from the foreclosure crisis through the window (national 1.6% at end-2015 → 0.9% at end-2019). The early years inflate each county's baseline mean and SD, so the median county scored z = −0.69 and 186 of 507 were ≤ −1. The layer would mostly have said "lower than 2015", not "unusual for this county".
+  - **Why not shorter.** Shorter windows remove more of the trend but shrink SDs toward CFPB's 0.1-point rounding. 2018–2019 leaves 346 counties with SD < 0.2. 2017–2019 balances the two: median z −0.10, 98 counties ≥ +1, 132 ≤ −1.
+  - **The floor.** One 0.1-point rounding step moves z by 0.1 ÷ SD. Below SD 0.2 that exceeds 0.5, the narrowest legend class, so z would reflect rounding rather than change. Flooring rather than flagging keeps every county on the map with a conservative score.
+- **Cost accepted:** the floor applies to 223 of 507 counties, so for nearly half the map z understates moves relative to a very stable baseline. A small within-window decline remains (median −0.14 points/year), so z leans slightly negative. Both are documented in METHODOLOGY.md.

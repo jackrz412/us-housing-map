@@ -35,6 +35,8 @@ Counts below exclude Puerto Rico.
   - `FIPSCode` is wrapped in literal single quotes (`'01003'`), presumably to keep Excel from dropping the leading zero. Strip them.
   - Uses Connecticut's new planning-region FIPS (`091xx`) since the Dec 2023 update.
   - There is also a 30–89 days file with the same shape.
+  - **Fetching:** `pipeline/fetch_cfpb.py` reads the download page and takes the newest `CountyMortgagesPercent-90-plusDaysLate-thru-YYYY-MM.csv` link. Each release revises history, so only the newest is used. CFPB's CDN returns **403 for a bare `Mozilla/5.0` user agent** but accepts curl's, Python's default, or a descriptive one; the fetcher sends `us-housing-map/1.0 (+repo URL)`.
+  - **Completeness:** the Dec 2025 release has no blank cells. All 507 counties have every month from 2008-01, and Connecticut's history is already on the planning-region codes.
 - **Coverage:** **507 counties** across 50 states (no Puerto Rico in this file). CFPB only publishes a county "if there are at least 1,000 mortgages in our sample" (their sample is the NMDB, roughly 5% of mortgages). That covers most of the population but only about 16% of counties.
 - **Decision (DECISIONS 007):** keep the layer at county level. The other ~2,640 counties show "Data not available". The spec's ≥3,000 validation rule can't apply to this layer, so it needs its own floor (e.g. ≥450, to catch a broken download without failing on normal release-to-release changes).
 
