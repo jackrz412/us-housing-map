@@ -8,11 +8,11 @@ Also writes this layer's entry in data/processed/meta.json.
 
 Usage: python3 pipeline/clean_income.py   (run fetch_acs.py first)
 """
-import datetime
 import json
 
 from fetch_acs import ACS_YEAR, raw_path
-from geo import PROCESSED_DIR, map_counties
+from geo import map_counties
+from output import update_meta, write_layer
 
 LAYER = "income"
 TABLE = "b19013"
@@ -64,24 +64,9 @@ def build():
     return income
 
 
-def write_json(path, obj):
-    # Sorted keys + fixed separators make the bytes deterministic, so re-running
-    # on the same input produces an identical file (SPEC: idempotent pipeline).
-    path.write_text(json.dumps(obj, sort_keys=True, separators=(",", ":")) + "\n")
-
-
-def update_meta(changed):
-    """Write this layer's entry in meta.json.
-
-    run_date is only bumped when income.json actually changed. Otherwise a
-    no-op re-run would rewrite meta.json with today's date and break the
-    "re-running produces identical outputs" rule.
-    """
-    meta_path = PROCESSED_DIR / "meta.json"
-    meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
+def meta_entry():
     source = json.loads(raw_path(TABLE).with_suffix(".source.json").read_text())
-
-    entry = {
+    return {
         "label": "Median household income",
         "unit": "USD",
         "source": "US Census Bureau, American Community Survey 5-year estimates, "
@@ -92,24 +77,11 @@ def update_meta(changed):
         "source_last_modified": source["last_modified"],
         "source_sha256": source["sha256"],
     }
-    old = meta.get(LAYER, {})
-    if changed or "run_date" not in old:
-        entry["run_date"] = datetime.date.today().isoformat()
-    else:
-        entry["run_date"] = old["run_date"]
-    meta[LAYER] = entry
-    write_json(meta_path, meta)
 
 
 def main():
-    income = build()
-    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
-    out = PROCESSED_DIR / f"{LAYER}.json"
-    before = out.read_bytes() if out.exists() else None
-    write_json(out, income)
-    changed = out.read_bytes() != before
-    update_meta(changed)
-    print(f"wrote {out} ({'changed' if changed else 'unchanged'})")
+    changed = write_layer(LAYER, build())
+    update_meta({LAYER: meta_entry()}, {LAYER: changed})
 
 
 if __name__ == "__main__":

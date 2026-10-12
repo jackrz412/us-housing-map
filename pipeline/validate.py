@@ -13,8 +13,18 @@ from geo import MAX_STATE_FIPS, PROCESSED_DIR, map_counties
 
 # Per-layer rules. min_counties counts non-null values. Add a layer here as
 # each one is built; CFPB delinquency will get min_counties=450 (DECISIONS 007).
+#
+# HMDA metrics are suppressed below 30 valid loans per county, which leaves
+# ~2,650-2,750 counties (2025 Snapshot). Their floor of 2,400 sits ~10% under
+# that: a normal year passes, a broken filter or truncated download doesn't.
+HMDA_FLOOR = 2400
 LAYERS = {
     "income": {"min_counties": 3000, "min": 5_000, "max": 500_000},
+    "hmda_loans": {"min_counties": 3000, "min": 0, "max": 500_000},
+    "hmda_rate": {"min_counties": HMDA_FLOOR, "min": 0, "max": 20},
+    "hmda_dti_over_43": {"min_counties": HMDA_FLOOR, "min": 0, "max": 100},
+    "hmda_cltv_over_90": {"min_counties": HMDA_FLOOR, "min": 0, "max": 100},
+    "hmda_loan_amount": {"min_counties": HMDA_FLOOR, "min": 10_000, "max": 5_000_000},
 }
 META_FIELDS = ["label", "source", "period", "legend_period", "source_url", "run_date"]
 
@@ -71,9 +81,10 @@ def validate_layer(name, rules, shapes, meta, r):
                   if isinstance(v, bool) or not isinstance(v, (int, float))]
     r.check(not wrong_type, "values are numbers or null", sample(wrong_type))
 
+    # Reports the surviving count every run, so a slow drift is visible
+    # before it trips the floor.
     r.check(len(values) >= rules["min_counties"],
-            f"at least {rules['min_counties']:,} counties with a value",
-            f"only {len(values):,}")
+            f"{len(values):,} counties with a value (floor {rules['min_counties']:,})")
 
     numeric = {k: v for k, v in values.items() if k not in wrong_type}
     out_of_bounds = [f"{k}={v}" for k, v in numeric.items()

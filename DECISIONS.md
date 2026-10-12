@@ -49,3 +49,27 @@ Each entry: the decision, the alternatives, and why. Newest at the bottom.
 - **Over:** CFPB delinquency, the original Phase 1 layer.
 - **Why:** income covers 3,143 of 3,144 counties, so it tests the full pipeline, validation and map against a complete layer. Delinquency covers ~500 counties and would mostly exercise the "Data not available" path.
 - **Note:** the ACS scripts use only the Python standard library. The summary file is 18 MB and needs a filter, not a query. DuckDB comes in with HMDA, where the 737 MB file needs it.
+
+## 010 — Reframe the layers around mortgage risk; rate, permits and income become context (2026-10-12)
+- **Chose:** organise the map around the "double trigger" model: outcome (delinquency vs baseline), burden (owner cost burden, high-DTI loans, property tax % of income) and equity (high-CLTV loans). Median HMDA rate, permits per 1,000 households and median income move to the click panel as context.
+- **Over:** the v1 set of five independent layers (delinquency, rate, permits, property tax ÷ home value, income).
+- **Why:** the v1 layers described housing conditions without a question tying them together. Measured against "where is mortgage risk building", the rate is too flat to map: across 2,719 counties the 2025 median rate has an IQR of 0.135 points (6.49–6.625%). Permits describe supply, not borrower risk. Income is an input to the burden ratios rather than a risk on its own.
+- **Cost accepted:** the Phase 1 income choropleth becomes a context metric in 2d. There is no shock layer until Phase 4 (BLS LAUS county unemployment).
+
+## 011 — Benchmark-based color scales instead of quantiles (2026-10-12)
+- **Chose:** `d3.scaleThreshold` with fixed breaks tied to benchmarks (e.g. HUD's 30% and 50% cost-burden lines, z = 0) or to round, documented values. One diverging and one warm sequential palette map-wide, distinguishable by lightness.
+- **Over:** quantile breaks, as used in Phase 1.
+- **Why:** quantiles always fill every class, so a map looks equally alarming whether risk is high everywhere or nowhere, and a class means something different every year. Fixed breaks make a class mean the same thing across counties, layers and data years, which risk layers need.
+- **Cost accepted:** a layer can bunch into one or two classes when the data sits far from the benchmark (see the owner cost burden open question in SPEC).
+
+## 012 — Delinquency baseline window: 2015–2019 (2026-10-12)
+- **Chose:** score each county's latest 90+ day delinquency rate as a z-score against that county's own monthly mean and SD over 2015–2019.
+- **Over:** a national benchmark (hides structural differences between counties), the full 2008–present history (dominated by the foreclosure crisis), or a window including 2020–2021.
+- **Why:** by 2015 the foreclosure-crisis backlog had largely cleared. From 2020, CARES Act forbearance kept many missed payments from being reported as delinquent, so 2020–2021 understates stress. 2015–2019 is the most recent "normal" stretch.
+- **Cost accepted:** counties with a very stable baseline have a near-zero SD, which inflates z. These get flagged rather than shown as extreme (2c sets the cutoff). Only the ~500 counties CFPB publishes have the layer (DECISIONS 007).
+
+## 013 — HMDA loan filters and per-metric suppression (2026-10-12)
+- **Chose:** 2025 Snapshot loans that are originated, home purchase, first lien and principal residence, excluding open-end lines of credit and reverse mortgages. `Exempt`/`NA` dropped per field. Each metric suppressed below 30 valid loans in the county. Loan count is a true 0 where a county has no reported loans.
+- **Over:** dropping a loan entirely when any field is exempt, or one suppression rule based on total loans.
+- **Why:** per-field validity keeps every usable value. A loan with an exempt DTI still has a valid rate. Lenders exempt from reporting the open-end or reverse flag (code `1111`, ~113k loans) aren't evidence that a loan *is* open-end or reverse, so those loans stay in.
+- **Note:** 99.8% of qualifying loans are in counties that survive suppression. The ~425 suppressed counties are small and rural.
