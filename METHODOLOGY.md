@@ -57,7 +57,7 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
   - **Revisions:** each CFPB release revises the full history, so a county's baseline can shift slightly between releases. The pipeline always uses the newest release.
   - `FIPSCode` comes wrapped in literal quotes (`'01003'`), stripped by the pipeline.
   - Distribution (Dec 2025): p5 −2.05, p25 −1.01, median −0.10, p75 0.78, p95 2.24, max 5.60 (Pueblo County, CO).
-- **Scale:** diverging, midpoint 0; breaks −2, −1, −0.5 | 0.5, 1, 2. The cool end is labelled "Below threshold" (here, the threshold is the county's own baseline), never "safe".
+- **Scale:** diverging, midpoint 0; breaks −2, −1, −0.5 | 0.5, 1, 2. The legend ends are labelled "Better than baseline" and "Worse than baseline" (the midpoint is the county's own 2017–2019 average), never "safe". This layer has data for only ~500 counties, so its "Data not available" hatch is drawn fainter than on other layers.
 
 ### Delinquency rate and change: `cfpb_delinquency_90`, `cfpb_delinquency_change` (click panel)
 - `cfpb_delinquency_90`: the latest month's 90+ day rate, % of mortgages (rounded to 0.1 by CFPB). Median county 0.9%.
@@ -161,3 +161,4 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
 | 2026-10-12 | 2c | Delinquency baseline 2017–2019 with a 0.2-point SD floor, instead of 2015–2019 (DECISIONS 016). Latest rate and pp change added for the click panel. |
 | 2026-10-12 | 2d | Legend breaks adopted as proposed and implemented in `site/layers.js`. Per-county flags (`low_reliability`, `topcoded`, `sd_floored`) shown in the tooltip, click panel and table (DECISIONS 017). |
 | 2026-10-12 | 3 | Weekly refresh: layers update when their source changes; new data years are switched by hand (DECISIONS 018). |
+| 2026-10-12 | 2f | Delinquency legend ends renamed "Better than baseline" / "Worse than baseline"; click-panel and table labels name what each value is a share of; fainter "Data not available" hatch on the delinquency layer. |

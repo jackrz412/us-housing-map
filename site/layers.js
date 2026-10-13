@@ -42,6 +42,9 @@ const tick = {
 };
 
 // --- Map layers, grouped by role --------------------------------------------------
+// `name` is the short switcher label. `panelName` is used in the click panel
+// and table, where each value sits next to a number: it says what the value
+// is a share (or ratio) of, so "34%" can't be misread.
 // Order here is the order in the layer switcher.
 const ROLES = [
   { id: "outcome", label: "Outcome" },
@@ -54,20 +57,23 @@ const MAP_LAYERS = [
     id: "cfpb_delinquency_z",
     role: "outcome",
     name: "Delinquency vs baseline",
+    panelName: "Delinquency vs own 2017–2019 average",
     title: "90+ day mortgage delinquency compared with each county's 2017–2019 normal",
     scale: "diverging",
     breaks: [-2, -1, -0.5, 0.5, 1, 2],
     tick: tick.z,
     unit: "Standard deviations from the county's 2017–2019 average",
     neutral: "−0.5 to +0.5: near baseline",
-    // Midpoint is a fixed benchmark (z = 0, the county's own baseline).
-    ends: ["Below threshold", "Above threshold"],
+    // Midpoint is the county's own 2017–2019 baseline (z = 0). Higher
+    // delinquency is worse, so the ends say which way is better.
+    ends: ["Better than baseline", "Worse than baseline"],
     format: fmt.z,
   },
   {
     id: "acs_cost_burden",
     role: "burden",
     name: "Owner cost burden",
+    panelName: "Mortgaged owners paying 30%+",
     title: "Share of mortgaged owners paying 30% or more of income on housing",
     scale: "diverging",
     // Neutral class 25–30% contains the US share (28.1%).
@@ -83,6 +89,7 @@ const MAP_LAYERS = [
     id: "hmda_dti_over_43",
     role: "burden",
     name: "High-DTI loans",
+    panelName: "2025 loans with DTI above 43%",
     title: "Share of 2025 home-purchase loans with debt-to-income above 43%",
     scale: "sequential",
     breaks: [20, 30, 40, 50],
@@ -94,6 +101,7 @@ const MAP_LAYERS = [
     id: "acs_property_tax_income",
     role: "burden",
     name: "Property tax burden",
+    panelName: "Median property tax as % of owner income",
     title: "Median property tax as a share of median owner income (ratio of medians)",
     scale: "sequential",
     breaks: [1, 1.5, 2, 2.5, 3, 4],
@@ -105,6 +113,7 @@ const MAP_LAYERS = [
     id: "hmda_cltv_over_90",
     role: "equity",
     name: "High-CLTV loans",
+    panelName: "2025 loans with CLTV above 90%",
     title: "Share of 2025 home-purchase loans with combined loan-to-value above 90%",
     scale: "sequential",
     breaks: [40, 50, 60, 70, 80],
@@ -124,7 +133,7 @@ const PANEL = [
     role: "outcome", label: "Outcome",
     rows: [
       { id: "cfpb_delinquency_z", layer: true },
-      { id: "cfpb_delinquency_90", name: "90+ days delinquent", format: fmt.pct1 },
+      { id: "cfpb_delinquency_90", name: "Mortgages 90+ days delinquent", format: fmt.pct1 },
       { id: "cfpb_delinquency_change", name: "Change vs 2017–2019 average", format: fmt.pts },
     ],
   },
@@ -145,10 +154,10 @@ const PANEL = [
     role: "context", label: "Context",
     rows: [
       { id: "income", name: "Median household income", format: fmt.usd },
-      { id: "hmda_rate", name: "Median mortgage rate (2025 loans)", format: fmt.rate },
-      { id: "hmda_loan_amount", name: "Median loan amount", format: fmt.usd },
-      { id: "hmda_loans", name: "Home-purchase loans (2025)", format: fmt.count },
-      { id: "permits_per_1000_hh", name: "Units permitted per 1,000 households (2025)", format: fmt.per1000 },
+      { id: "hmda_rate", name: "Median rate on 2025 loans", format: fmt.rate },
+      { id: "hmda_loan_amount", name: "Median amount of 2025 loans", format: fmt.usd },
+      { id: "hmda_loans", name: "2025 home-purchase loans", format: fmt.count },
+      { id: "permits_per_1000_hh", name: "2025 units permitted per 1,000 households", format: fmt.per1000 },
     ],
   },
 ];

@@ -65,10 +65,14 @@ function init(topo, meta, data) {
   // composite of three Albers conic equal-area projections: the lower 48,
   // plus Alaska and Hawaii scaled and moved into insets. Equal-area keeps each
   // county's on-screen size proportional to its real area, so no region looks
-  // more important because the projection inflated it. fitSize() picks the
-  // scale and translation that fit all states in the box.
+  // more important because the projection inflated it. fitExtent() picks the
+  // scale and translation that fit all states inside the given box. The box
+  // is inset by FIT_PAD on each side: with no inset the western Aleutians
+  // land exactly on x = 0 and their outlines are cut off by the SVG edge.
+  const FIT_PAD = 10;
   const projection = d3.geoAlbersUsa()
-    .fitSize([WIDTH, HEIGHT], { type: "FeatureCollection", features: states });
+    .fitExtent([[FIT_PAD, FIT_PAD], [WIDTH - FIT_PAD, HEIGHT - FIT_PAD]],
+      { type: "FeatureCollection", features: states });
 
   // --- Path generator ---------------------------------------------------------
   // geoPath(projection) turns a GeoJSON feature into an SVG path string. For
@@ -149,6 +153,7 @@ function init(topo, meta, data) {
   }
 
   // --- SVG ----------------------------------------------------------------------
+  const mapCard = document.getElementById("map-card");
   const svg = d3.select("#map").append("svg")
     .attr("class", "map")
     .attr("viewBox", [0, 0, WIDTH, HEIGHT])
@@ -438,7 +443,7 @@ function init(topo, meta, data) {
       const dl = document.createElement("dl");
       for (const row of section.rows) {
         const layer = row.layer ? LAYER_BY_ID.get(row.id) : null;
-        const name = layer ? layer.name : row.name;
+        const name = layer ? layer.panelName : row.name;
         const format = layer ? layer.format : row.format;
         const v = valueOf(row.id, fips);
 
@@ -447,7 +452,10 @@ function init(topo, meta, data) {
         const chip = document.createElement("span");
         chip.className = "chip";
         // Only map layers get a color chip; context metrics stay neutral.
-        if (layer && v != null) chip.style.background = scales.get(layer.id)(v);
+        if (layer && v != null) {
+          chip.classList.add("filled");
+          chip.style.background = scales.get(layer.id)(v);
+        }
         const dt = document.createElement("dt");
         dt.textContent = name;
         const dd = document.createElement("dd");
@@ -486,8 +494,9 @@ function init(topo, meta, data) {
       s.textContent = layer.tick(b);
       return s;
     }));
-    // Diverging layers name their midpoint (layers.js: a benchmark vs the US
-    // share); sequential layers just run low to high.
+    // Diverging layers say what their midpoint is (layers.js `ends`: the
+    // county's own baseline, or the US share); sequential layers just run low
+    // to high.
     const [lo, hi] = (layer.ends ?? ["Lower", "Higher"]).map((t, i) => (i ? `${t} ▶` : `◀ ${t}`));
     const ends = document.getElementById("ends");
     ends.replaceChildren(...[lo, hi].map((t) => {
@@ -534,7 +543,7 @@ function init(topo, meta, data) {
       return dir * d3.ascending(a[key], b[key]) || d3.ascending(a.name, b.name);
     });
 
-    document.getElementById("value-header").textContent = layer.name;
+    document.getElementById("value-header").textContent = layer.panelName;
     document.querySelectorAll("thead th").forEach((th) => {
       const k = th.querySelector("button")?.dataset.sort;
       th.setAttribute("aria-sort", k === key ? (dir > 0 ? "ascending" : "descending") : "none");
@@ -587,6 +596,11 @@ function init(topo, meta, data) {
         const v = valueOf(layer.id, f.id);
         return `${placeName(f)}: ${v == null ? "Data not available" : layer.format(v)}`;
       });
+
+    // Delinquency has data for only ~500 counties, so at full contrast the
+    // hatch would dominate the map. A quieter hatch (index.html CSS, applied
+    // to both the map and its legend swatch) lets the counties with data lead.
+    mapCard.classList.toggle("na-quiet", layer.id === "cfpb_delinquency_z");
 
     document.getElementById("layer-title").textContent = layer.title;
     const values = Object.values(data[layer.id]);
