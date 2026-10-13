@@ -4,7 +4,8 @@ Outputs in data/processed/, each {fips: value} over every in-scope map county:
   hmda_loans.json        number of qualifying loans (0 if none reported)
   hmda_rate.json         median interest_rate, %
   hmda_dti_over_43.json  % of loans with debt-to-income above 43%
-  hmda_cltv_over_90.json % of loans with combined loan-to-value above 90%
+  hmda_cltv_over_90.json % of conventional loans with combined loan-to-value above 90%
+  hmda_govt_share.json   % of loans that are FHA, VA or USDA/RHS
   hmda_loan_amount.json  median loan_amount, USD
 A metric is null where the county has fewer than --min-loans valid values.
 
@@ -60,6 +61,14 @@ DTI_VALID = ["<20%", "20%-<30%", "30%-<36%"] + [str(i) for i in range(36, 50)] +
 
 CLTV_THRESHOLD = 90  # percent
 
+# loan_type: 1 conventional, 2 FHA, 3 VA, 4 USDA/RHS. The CLTV layer counts
+# conventional loans only (DECISIONS 019): FHA, VA and USDA loans are above
+# 90% CLTV by program design (3.5% or zero down), so including them made the
+# layer mostly a map of government lending. The government share is output
+# separately so that side isn't hidden.
+CONVENTIONAL = "1"
+GOVERNMENT = ["2", "3", "4"]
+
 
 def sql_list(values):
     return ", ".join(f"'{v}'" for v in values)
@@ -76,6 +85,9 @@ WITH loans AS (
         TRY_CAST(interest_rate AS DOUBLE) AS rate,
         TRY_CAST(combined_loan_to_value_ratio AS DOUBLE) AS cltv,
         TRY_CAST(loan_amount AS DOUBLE) AS amount,
+        CASE WHEN loan_type IN ('{CONVENTIONAL}', {sql_list(GOVERNMENT)})
+             THEN loan_type IN ({sql_list(GOVERNMENT)}) END AS is_govt,
+        loan_type = '{CONVENTIONAL}' AS is_conv,
         CASE WHEN debt_to_income_ratio IN ({sql_list(DTI_VALID)})
              THEN debt_to_income_ratio IN ({sql_list(DTI_OVER_43)}) END AS dti_over_43
     FROM read_csv(?, header = true, all_varchar = true)
@@ -88,8 +100,10 @@ SELECT
     median(rate)                     AS median_rate,
     count(dti_over_43)               AS n_dti,
     avg(dti_over_43::INTEGER) * 100  AS pct_dti_over_43,
-    count(cltv)                      AS n_cltv,
-    avg((cltv > {CLTV_THRESHOLD})::INTEGER) * 100 AS pct_cltv_over_90,
+    count(cltv) FILTER (WHERE is_conv)                      AS n_cltv,
+    avg((cltv > {CLTV_THRESHOLD})::INTEGER) FILTER (WHERE is_conv) * 100 AS pct_cltv_over_90,
+    count(is_govt)                   AS n_govt,
+    avg(is_govt::INTEGER) * 100      AS pct_govt,
     count(amount)                    AS n_amount,
     median(amount)                   AS median_amount
 FROM loans
@@ -107,9 +121,14 @@ METRICS = {
         "definition": "Share of qualifying loans with debt_to_income_ratio above 43% "
                       "(reported values 44-49, '50%-60%', '>60%')"}),
     "hmda_cltv_over_90": ("n_cltv", "pct_cltv_over_90", 1, {
-        "label": "Loans with combined loan-to-value above 90%", "unit": "% of loans",
-        "definition": f"Share of qualifying loans with combined_loan_to_value_ratio "
-                      f"above {CLTV_THRESHOLD}"}),
+        "label": "Conventional loans with combined loan-to-value above 90%",
+        "unit": "% of conventional loans",
+        "definition": f"Share of qualifying conventional loans (loan_type 1) with "
+                      f"combined_loan_to_value_ratio above {CLTV_THRESHOLD}"}),
+    "hmda_govt_share": ("n_govt", "pct_govt", 1, {
+        "label": "Government-backed loans", "unit": "% of loans",
+        "definition": "Share of qualifying loans that are FHA, VA or USDA/RHS "
+                      "(loan_type 2, 3 or 4)"}),
     "hmda_loan_amount": ("n_amount", "median_amount", 0, {
         "label": "Median loan amount", "unit": "USD",
         "definition": "Median loan_amount of qualifying loans (HMDA reports the "

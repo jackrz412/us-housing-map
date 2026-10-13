@@ -112,15 +112,29 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
 
 ## Equity
 
-### Loans with combined loan-to-value above 90%: `hmda_cltv_over_90`
-- **Definition:** share of 2025 qualifying loans with `combined_loan_to_value_ratio` > 90.
+### Conventional loans with combined loan-to-value above 90%: `hmda_cltv_over_90`
+- **Definition:** share of 2025 qualifying **conventional** loans (`loan_type` 1) with `combined_loan_to_value_ratio` > 90. Suppressed below 30 conventional loans with a valid CLTV.
+- **Why conventional only (DECISIONS 019).** Government-backed loans are above 90% CLTV by program design. National shares above 90%, 2025 qualifying loans:
+
+  | Loan type | Loans | CLTV reported | Above 90% |
+  |---|---|---|---|
+  | Conventional | 1,980,765 | 1,847,889 | 29.7% |
+  | FHA | 630,419 | 622,981 | 90.0% |
+  | VA | 329,120 | 263,509 | 81.4% |
+  | USDA/RHS | 32,502 | 31,780 | 91.9% |
+  | All | 2,972,806 | 2,766,159 | 48.9% |
+
+  With every loan type included, a county's share above 90% tracked its government-loan share (correlation 0.76 across counties), so the layer mostly mapped FHA/VA lending. Conventional only, the correlation is 0.22: the layer shows where buyers choosing a standard mortgage put down less than 10%.
 - **Nuances:**
   - **CLTV includes all liens** the lender relied on (e.g. piggyback seconds), so it measures the buyer's equity at purchase better than LTV would.
-  - **Mostly a loan-type signal.** Nationally, 90% of FHA, 82% of VA and 92% of USDA loans are above 90% CLTV, against 30% of conventional loans. These programs are designed for low down payments. The layer largely shows where low-down-payment government lending is concentrated, which *is* thin equity, but readers should know the driver. Consider showing FHA/VA share in the click panel (2d).
+  - **Government lending isn't dropped from the page.** Its share is shown next to this layer in the click panel (`hmda_govt_share`, below), because those loans are thin-equity too.
+  - **Conventional loans above 80% LTV usually carry private mortgage insurance,** which protects the lender, not the borrower's equity.
   - **Equity at origination only.** Price changes since purchase aren't reflected.
-  - **`NA` is more common for CLTV** than for other fields (141k loans), so CLTV has the fewest surviving counties (2,645).
+  - **Fewer counties:** 2,331 (vs 2,645 with all loan types). Rural counties where most purchase loans are FHA/VA/USDA often have fewer than 30 conventional loans.
+  - **`NA` is more common for CLTV** than for other fields (133k conventional loans). One in five VA loans has no CLTV, which no longer affects the layer.
   - Extreme values (CLTV up to 560) exist in the raw data; a share-above-threshold is unaffected by them.
-- **Scale:** sequential warm; breaks 40, 50, 60, 70, 80%.
+  - Distribution: p10 21.8%, median 35.5%, p90 49.2%.
+- **Scale:** sequential warm; breaks 20, 30, 40, 50% (the national conventional share, 29.7%, sits at the 30% break). Counties per class: 167, 532, 833, 584, 215.
 
 ---
 
@@ -128,6 +142,9 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
 
 ### Median household income: `income`
 - ACS 2020–2024 5-year, `B19013_E001`, in 2024 inflation-adjusted dollars. Missing for De Baca County, NM (`35011`).
+
+### Government-backed share of loans: `hmda_govt_share`
+- Share of 2025 qualifying loans that are FHA, VA or USDA/RHS (`loan_type` 2–4). Shown in the click panel under Equity, next to the conventional CLTV layer. Suppressed below 30 loans; 2,752 counties. County p10 19.3%, median 38.2%, p90 56.7%.
 
 ### Median mortgage rate: `hmda_rate`
 - Median `interest_rate` of 2025 qualifying loans. The note rate, not APR (excludes points and fees).
@@ -162,3 +179,4 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
 | 2026-10-12 | 2d | Legend breaks adopted as proposed and implemented in `site/layers.js`. Per-county flags (`low_reliability`, `topcoded`, `sd_floored`) shown in the tooltip, click panel and table (DECISIONS 017). |
 | 2026-10-12 | 3 | Weekly refresh: layers update when their source changes; new data years are switched by hand (DECISIONS 018). |
 | 2026-10-12 | 2f | Delinquency legend ends renamed "Better than baseline" / "Worse than baseline"; click-panel and table labels name what each value is a share of; fainter "Data not available" hatch on the delinquency layer. |
+| 2026-10-12 | 2g | High-CLTV layer limited to conventional loans; breaks 40–80% → 20, 30, 40, 50%; government-backed loan share added to the click panel (DECISIONS 019). |

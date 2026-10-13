@@ -113,12 +113,13 @@ const MAP_LAYERS = [
     id: "hmda_cltv_over_90",
     role: "equity",
     name: "High-CLTV loans",
-    panelName: "2025 loans with CLTV above 90%",
-    title: "Share of 2025 home-purchase loans with combined loan-to-value above 90%",
+    panelName: "2025 conventional loans with CLTV above 90%",
+    title: "Share of 2025 conventional purchase loans with combined LTV above 90%",
     scale: "sequential",
-    breaks: [40, 50, 60, 70, 80],
+    // Conventional loans only (DECISIONS 019). 30% is about the national share.
+    breaks: [20, 30, 40, 50],
     tick: tick.pct,
-    unit: "% of loans",
+    unit: "% of conventional loans (excludes FHA, VA, USDA)",
     format: fmt.pct1,
   },
 ];
@@ -148,7 +149,12 @@ const PANEL = [
   },
   {
     role: "equity", label: "Equity",
-    rows: [{ id: "hmda_cltv_over_90", layer: true }],
+    rows: [
+      { id: "hmda_cltv_over_90", layer: true },
+      // Excluded from the layer because they're above 90% by design; shown
+      // here so that thin equity isn't hidden.
+      { id: "hmda_govt_share", name: "2025 loans that are FHA, VA or USDA", format: fmt.pct1 },
+    ],
   },
   {
     role: "context", label: "Context",
