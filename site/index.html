@@ -66,6 +66,11 @@
       --na-line-quiet: #dedcd5;
       /* Edge on small color swatches, so pale fills don't vanish. */
       --swatch-edge: rgba(11, 11, 11, 0.35);
+      /* Site header colors, matching jackrz412.github.io's SiteHeader (its
+         --color-text, --color-muted and --color-accent). */
+      --site-name: #1d1c1a;
+      --site-link: #5e5a53;
+      --site-accent: #1f4e79;
     }
     /* Dark mode swaps surfaces and ink only. Data colors come from layers.js
        and are the same in both modes, so color direction never flips. */
@@ -77,6 +82,7 @@
         --border: rgba(255, 255, 255, 0.12); --accent: #9bc1f1; --focus: #ffffff;
         --na-line: #55554f; --na-line-quiet: #353532;
         --swatch-edge: rgba(255, 255, 255, 0.35);
+        --site-name: #ffffff; --site-link: #c3c2b7; --site-accent: #9bc1f1;
       }
     }
     :root[data-theme="dark"] {
@@ -86,9 +92,27 @@
       --border: rgba(255, 255, 255, 0.12); --accent: #9bc1f1; --focus: #ffffff;
       --na-line: #55554f; --na-line-quiet: #353532;
       --swatch-edge: rgba(255, 255, 255, 0.35);
+      --site-name: #ffffff; --site-link: #c3c2b7; --site-accent: #9bc1f1;
     }
 
     * { box-sizing: border-box; }
+
+    /* Site header, as on jackrz412.github.io: name at left (a link to the
+       portfolio home), small links at right, and a 2px accent bar the full
+       width of the window. Lined up with the page column below it; on narrow
+       phones the links wrap under the name. */
+    .site-header { border-bottom: 2px solid var(--site-accent); }
+    .site-header .inner {
+      display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+      gap: 8px 24px; max-width: 1400px; margin: 0 auto; padding: 24px 16px;
+    }
+    .site-header .home {
+      color: var(--site-name); font-family: var(--font-serif); font-weight: 600;
+      font-size: 17px; text-decoration: none;
+    }
+    .site-header ul { display: flex; gap: 24px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+    .site-header nav a { color: var(--site-link); text-decoration: none; }
+    .site-header .home:hover, .site-header nav a:hover { color: var(--site-accent); text-decoration: underline; }
     body {
       margin: 0; background: var(--page); color: var(--ink);
       font: 15px/1.45 var(--font-sans);
@@ -252,6 +276,22 @@
   </style>
 </head>
 <body>
+  <!-- Same header as jackrz412.github.io. Full URLs, so the links also work
+       in a local preview, not only on the shared github.io domain. -->
+  <header class="site-header">
+    <div class="inner">
+      <a class="home" href="https://jackrz412.github.io/">Jack Roberts</a>
+      <nav aria-label="Site">
+        <ul>
+          <li><a href="https://jackrz412.github.io/about/">About</a></li>
+          <li><a href="https://jackrz412.github.io/#projects">Projects</a></li>
+          <li><a href="https://github.com/jackrz412">GitHub</a></li>
+          <li><a href="https://jackrz412.github.io/#contact">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
   <main>
     <h1>Where mortgage stress is building: a county-level view</h1>
     <p class="lede">
