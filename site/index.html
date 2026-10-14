@@ -180,6 +180,9 @@
     .zoom-controls button.reset { font-size: 11px; }
     .zoom-controls button:hover { background: var(--surface-2); }
     svg.map:focus { outline: none; }
+    /* One hatched shape under the counties covering every county with no data
+       (map.js render()). Pointer events pass through to the county above. */
+    .na-area { fill: url(#na-hatch); pointer-events: none; }
     .counties path { cursor: pointer; outline: none; }
     .county-borders { fill: none; vector-effect: non-scaling-stroke; stroke: var(--surface); stroke-width: 0.25; stroke-linejoin: round; pointer-events: none; }
     .state-borders { fill: none; vector-effect: non-scaling-stroke; stroke: var(--surface); stroke-width: 1; stroke-linejoin: round; pointer-events: none; }
@@ -215,7 +218,7 @@
 
     /* Tooltip */
     .tooltip {
-      position: fixed; z-index: 10; pointer-events: none; max-width: 260px;
+      position: fixed; top: 0; left: 0; z-index: 10; pointer-events: none; max-width: 260px;
       background: var(--surface); color: var(--ink); border: 1px solid var(--border);
       border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
       padding: 8px 10px; font-size: 13px; opacity: 0; transition: opacity 80ms;
