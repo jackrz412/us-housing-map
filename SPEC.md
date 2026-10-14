@@ -20,8 +20,8 @@ Phase 2 reframes the map around the **double trigger** model of mortgage default
 | Burden | Owner cost burden | ACS `B25091` | **Share** of owner-occupied units *with a mortgage* paying ≥ 30% of household income on owner costs (HUD cost-burdened line) | Diverging around the US share (28.1%); see METHODOLOGY.md for proposed breaks |
 | Burden | High-DTI loans | HMDA | % of 2025 qualifying loans with debt-to-income above 43% | Sequential warm |
 | Burden | Property tax burden | ACS | Median real estate taxes paid (`B25103_E001`) ÷ median household income of owner-occupied households (`B25119_E002`), as % | Sequential warm |
-| Equity | High-CLTV loans | HMDA | % of 2025 qualifying loans with combined loan-to-value above 90% | Sequential warm |
-| Context (click panel only) | Latest 90+ day delinquency rate and change vs 2017–2019 (pp); median household income (all households); median HMDA rate; permits per 1,000 households; severe cost burden (≥ 50%); loan count; median loan amount | CFPB; ACS `B19013`; HMDA; BPS ÷ ACS `B11001_E001`; ACS `B25091` | as named | Neutral blue |
+| Equity | High-CLTV loans | HMDA | % of 2025 qualifying **conventional** loans with combined loan-to-value above 90% (DECISIONS 019) | Sequential warm |
+| Context (click panel only) | Latest 90+ day delinquency rate and change vs 2017–2019 (pp); median household income (all households); median HMDA rate; permits per 1,000 households; severe cost burden (≥ 50%); loan count; median loan amount; government-backed (FHA/VA/USDA) share of loans | CFPB; ACS `B19013`; HMDA; BPS ÷ ACS `B11001_E001`; ACS `B25091` | as named | Neutral blue |
 
 "Qualifying" HMDA loans are originated, home-purchase, first-lien, principal-residence loans, excluding open-end lines of credit and reverse mortgages (DECISIONS 013).
 
@@ -68,7 +68,7 @@ sources → pipeline/ (Python + DuckDB) → data/processed/*.json → site/ (D3 
 - **PR check:** PRs touching `pipeline/` rebuild every layer from fresh downloads on Linux and must reproduce the committed data byte for byte.
 
 ## Validation (runs after every pipeline run, and gates every refresh commit and deploy)
-- At least 3,000 counties with a value per county-level layer, except: CFPB delinquency, which only publishes ~500 counties (floor: 450); HMDA metrics after suppression (~2,650–2,750 counties; floor: 2,400). The count is printed every run.
+- At least 3,000 counties with a value per county-level layer, except: CFPB delinquency, which only publishes ~500 counties (floor: 450); HMDA metrics after suppression (~2,650–2,750 counties; floor: 2,400), except the conventional-only CLTV share (~2,330; floor: 2,100). The count is printed every run.
 - Every data FIPS has a map shape (anti-join).
 - No FIPS outside the 50 states + DC (state FIPS `01`–`56`).
 - Values within plausible bounds (e.g. 0–20% for mortgage rates, 0–100% for shares).
