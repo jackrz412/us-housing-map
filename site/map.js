@@ -161,15 +161,19 @@ function init(topo, meta, data) {
     .attr("viewBox", [0, 0, WIDTH, HEIGHT])
     .attr("aria-label", "County map. Tab to enter, arrow keys to move between counties, Enter to open details.");
 
-  // Diagonal hatch for "Data not available". The legend swatch reuses it.
+  // Diagonal hatch for "Data not available": a 0.75-wide stripe every 4 units.
+  // The tile is 8x8 with two stripes rather than 4x4 with one, so the browser
+  // repeats a quarter as many tiles to fill the map. (The legend swatch in
+  // index.html has its own small copy.)
   const naHatch = svg.append("defs").append("pattern")
     .attr("id", "na-hatch")
     .attr("patternUnits", "userSpaceOnUse")
-    .attr("width", 4).attr("height", 4)
+    .attr("width", 8).attr("height", 8)
     .attr("patternTransform", "rotate(45)")
-    .call((p) => p.append("rect").attr("width", 4).attr("height", 4).style("fill", "var(--na-fill)"))
-    .call((p) => p.append("line").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 4)
-      .style("stroke", "var(--na-line)").style("stroke-width", 1.5));
+    .call((p) => p.append("rect").attr("width", 8).attr("height", 8).style("fill", "var(--na-fill)"))
+    .call((p) => p.selectAll(".stripe").data([0, 4]).join("rect")
+      .attr("x", (x) => x).attr("width", 0.75).attr("height", 8)
+      .style("fill", "var(--na-line)"));
 
   // --- Data join ----------------------------------------------------------------
   // selectAll(...).data(array, key) pairs each county feature with a <path>.
@@ -246,7 +250,8 @@ function init(topo, meta, data) {
     })
     // d3's default speeds up only for ctrlKey; treat Cmd the same.
     .wheelDelta((event) => -event.deltaY * (event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 0.002) * 10)
-    .on("zoom", zoomed);
+    .on("zoom", zoomed)
+    .on("end", zoomEnded);
 
   svg.call(zoom)
     // Double-click would both select a county and zoom; keep it to selecting.
@@ -254,14 +259,21 @@ function init(topo, meta, data) {
 
   function zoomed({ transform }) {
     viewport.attr("transform", transform);
-    // The hatch pattern is in the group's coordinates too, so it would grow
-    // with the zoom; scaling it by 1/k keeps it the same size on screen.
-    naHatch.attr("patternTransform", `scale(${1 / transform.k}) rotate(45)`);
     // A pointer tooltip would now point at the wrong place, so hide it; a
     // keyboard-focused county keeps its tooltip, re-anchored to where it moved.
     const focused = document.activeElement;
     if (focused?.closest?.(".counties")) showTipAtElement(d3.select(focused).datum());
     else hideTip();
+  }
+
+  // The hatch pattern is in the group's coordinates too, so it grows with the
+  // zoom; scaling it by 1/k keeps it the same size on screen. This runs once
+  // when a gesture ends, not on every frame: changing the pattern makes the
+  // browser rebuild it and repaint the whole hatched area, which on delinquency
+  // is most of the map. During a pinch the stripes scale with the map, then
+  // snap back.
+  function zoomEnded({ transform }) {
+    naHatch.attr("patternTransform", `scale(${1 / transform.k}) rotate(45)`);
   }
 
   const animate = (sel) => (reduceMotion ? sel : sel.transition().duration(250));
