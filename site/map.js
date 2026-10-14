@@ -48,6 +48,8 @@ function init(topo, meta, data) {
     .filter((f) => inScope(f.id));
   const states = topojson.feature(topo, topo.objects.states).features
     .filter((f) => inScope(f.id));
+  // The same counties still in TopoJSON form, for topojson.merge() (render()).
+  const countyGeoms = topo.objects.counties.geometries.filter((g) => inScope(g.id));
   const stateName = new Map(states.map((s) => [s.id, s.properties.name]));
   const countyById = new Map(counties.map((f) => [f.id, f]));
   const placeName = (f) => `${f.properties.name}, ${stateName.get(f.id.slice(0, 2)) ?? ""}`;
@@ -179,13 +181,20 @@ function init(topo, meta, data) {
   //
   // The *data* join (shapes <-> values) is the lookup data[layer][f.id]. FIPS
   // are strings in both files, so "01001" matches "01001". A county with null,
-  // or no key at all, gets the hatch.
+  // or no key at all, is left transparent so the hatch underneath shows.
+  //
+  // The hatch is one shape, not a fill on each county: every pattern fill is
+  // painted separately, and delinquency alone has ~2,640 missing counties,
+  // which made scrolling and zooming choppy. render() merges the missing
+  // counties into one outline (naArea) per layer and hatches that once.
   //
   // Keyboard access uses a "roving tabindex": exactly one county path has
   // tabindex=0 (the one Tab lands on); the rest have -1, so Tab enters and
   // leaves the map in one step instead of visiting 3,144 counties.
   // Everything that pans and zooms lives in one group; d3.zoom moves it.
   const viewport = svg.append("g").attr("class", "viewport");
+
+  const naArea = viewport.append("path").attr("class", "na-area");
 
   const countyPaths = viewport.append("g").attr("class", "counties")
     .selectAll("path")
@@ -286,6 +295,14 @@ function init(topo, meta, data) {
 
   // --- Tooltip ------------------------------------------------------------------
   const tip = document.getElementById("tooltip");
+  // The tooltip's size is measured once each time its content changes, not on
+  // every pointer move: reading a size right after moving an element forces
+  // the browser to redo layout on the spot. Moves are batched to at most one
+  // per frame with requestAnimationFrame.
+  let tipOn = false;
+  let tipSize = [0, 0];
+  let tipAt = null;
+  let tipFrame = 0;
 
   function showTip(f, x, y) {
     const layer = LAYER_BY_ID.get(state.layer);
@@ -305,23 +322,36 @@ function init(topo, meta, data) {
     }
     tip.replaceChildren(...parts);
     tip.classList.add("on");
+    tipOn = true;
+    const { width, height } = tip.getBoundingClientRect();
+    tipSize = [width, height];
     hoverOutline.attr("d", path(f));
     placeTip(x, y);
   }
 
   function placeTip(x, y) {
+    tipAt = [x, y];
+    if (!tipFrame) tipFrame = requestAnimationFrame(moveTip);
+  }
+
+  function moveTip() {
+    tipFrame = 0;
     // Sit below-right of the point, flipped to stay inside the window.
+    const [x, y] = tipAt;
+    const [width, height] = tipSize;
     const pad = 14;
-    const { width, height } = tip.getBoundingClientRect();
     let left = x + pad;
     let top = y + pad;
     if (left + width > window.innerWidth - 8) left = x - width - pad;
     if (top + height > window.innerHeight - 8) top = y - height - pad;
-    tip.style.left = `${Math.max(8, left)}px`;
-    tip.style.top = `${Math.max(8, top)}px`;
+    // transform, not left/top: moving with a transform needs no layout.
+    tip.style.transform = `translate(${Math.max(8, left)}px, ${Math.max(8, top)}px)`;
   }
 
   function hideTip() {
+    // Called on every zoom frame; skip the DOM writes when already hidden.
+    if (!tipOn) return;
+    tipOn = false;
     tip.classList.remove("on");
     hoverOutline.attr("d", null);
   }
@@ -586,16 +616,22 @@ function init(topo, meta, data) {
     const layer = LAYER_BY_ID.get(state.layer);
     const scale = scales.get(layer.id);
     // Re-color the existing paths; the join from first draw still holds.
-    // style(), not attr(): fill must accept url(#na-hatch) and computed colors.
+    // Missing counties are "transparent" rather than "none": a transparent
+    // fill still counts as painted, so they keep hover, click and focus.
     countyPaths
       .style("fill", (f) => {
         const v = valueOf(layer.id, f.id);
-        return v == null ? "url(#na-hatch)" : scale(v);
+        return v == null ? "transparent" : scale(v);
       })
       .attr("aria-label", (f) => {
         const v = valueOf(layer.id, f.id);
         return `${placeName(f)}: ${v == null ? "Data not available" : layer.format(v)}`;
       });
+
+    // topojson.merge() joins the missing counties into one multipolygon,
+    // dropping the borders they share, so the hatch is a single shape.
+    const missing = countyGeoms.filter((g) => valueOf(layer.id, g.id) == null);
+    naArea.attr("d", missing.length ? path(topojson.merge(topo, missing)) : null);
 
     // Delinquency has data for only ~500 counties, so at full contrast the
     // hatch would dominate the map. A quieter hatch (index.html CSS, applied
