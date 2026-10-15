@@ -115,3 +115,133 @@ Counts below exclude Puerto Rico.
 ## Reproducing the samples
 
 Samples were pulled to a scratch directory, not into `data/raw/`. Nothing is committed. Every URL above works without auth except the Census API.
+
+---
+
+# Phase 4.0 spike: housing stress index sources
+
+Run 2026-10-14/15 for the index and backtest in SPEC Phase 4. Samples only; no pipeline code. The HMDA 2019 file was downloaded into `data/raw/` (git-ignored) because 4b needs it; everything else went to a scratch directory.
+
+## Summary
+
+| # | Source | Needed for | Verdict |
+|---|---|---|---|
+| 1 | HMDA 2019 One-Year | PTI, D, R, CLTV as of 2019 | ✅ Every field present with the same codes as 2025. Needs validity bounds for `interest_rate` and `income` (below). 2018 has no One-Year file at the usual path. |
+| 2 | ACS 2015–2019 5-year | S, effective tax rate as of 2019 | ✅ Table-based files exist, but only under the Census **prototype** folder. Same headers as 2024. |
+| 3 | Treasury FIO homeowners insurance | I (insurance in PTI) | ✅ Usable, 2018–2022 only, nothing newer. ⚠️ The HUD crosswalk now needs a registered token. Coverage estimated with a public Census substitute. |
+| 4 | Urban Institute "Debt in America" | O (non-mortgage debt) | ⚠️ A 2019-era release exists (2018 credit data), but its rates are rounded to 2 decimals, and the measures that would vary most changed definition after 2022. **Recommendation: leave O out; Existing = x_S.** |
+| 5 | BLS LAUS county unemployment | report only | ✅ Monthly through Aug 2026. Bulk files need a contact email in the request; the keyless API is too rate-limited for 3,144 counties. |
+| 6 | 2019 geography | backtest | Connecticut's 8 old counties and Alaska's Valdez-Cordova (`02261`). **8 of the 507 CFPB counties are affected** (all Connecticut). |
+| 7 | HMDA 2019 size and time | planning | 985 MB zip, 6.8 GB CSV. Download ~2 min, unzip 20 s, one DuckDB pass ~5 s warm. |
+
+## 1. HMDA 2019 (One-Year dataset)
+
+- **File (pin this):** `https://files.ffiec.cfpb.gov/static-data/one-year/2019/2019_public_lar_one_year_csv.zip`
+  - 985,323,790 bytes, `Last-Modified: Wed, 15 Oct 2025 05:29:18 GMT`, sha256 `4fb470ecebfcd2d78fd4c529e382a0c58d32d5865afa5e51efc80daf3e709033`.
+  - Unzips to `2019_public_lar_one_year.csv`, 6,837,866,739 bytes, 99 columns (same column set as 2025).
+  - The Snapshot 2019 file also exists (`snapshot/2019/2019_public_lar_csv.zip`, 980 MB). One-Year includes resubmissions, so it's the better "final" view of 2019. Record `"dataset": "One-Year 2019"` in `meta.json`.
+- **2018 (for the 4b robustness check):** there is **no One-Year file** at `one-year/2018/…` (404 for every name tried). The Data Browser serves 2018 from the Three-Year dataset. The **Snapshot** exists: `snapshot/2018/2018_public_lar_csv.zip` (823,719,647 bytes, `Last-Modified: 2025-11-21`). Using it means the 2018 run is Snapshot while 2019 is One-Year; the difference is resubmitted records only.
+- **Fields checked** (2019 vs 2025, Phase 2a loan filters, home purchase): `income`, `property_value`, `loan_amount`, `interest_rate`, `loan_type`, `debt_to_income_ratio`, `combined_loan_to_value_ratio`, `denial_reason_1`–`_4`, `county_code`. All present, same names, same codes.
+
+| Field | 2019 | 2025 | Note for 4a |
+|---|---|---|---|
+| Qualifying originations | 3,857,134 | 2,988,847 | |
+| Applications for R (`action_taken` 1, 2, 3) | 4,554,867 | 3,624,067 | |
+| Denied (3) with debt-to-income (code `1`) in any `denial_reason` | 190,305 (34.6% of denials) | 197,161 (39.2%) | |
+| `loan_type` | 1–4 | 1–4 | same codes |
+| `debt_to_income_ratio` | same bins and whole numbers 36–49, `NA`, `Exempt` | same | the Phase 2a DTI mapping works unchanged |
+| `income` (thousands of $) | `NA` 33,998; ≤ 0: 5,756; median 81; max 139,000 | `NA` 25,559; ≤ 0: 5,879; median 113 | drop `NA` and ≤ 0 |
+| `interest_rate` (%) | `Exempt` 100,934, `NA` 1,415; ≤ 0: 1,280; median 4.125; **max 5,625** | ≤ 0: 982; median 6.49; max 20 | needs a validity bound (proposed 0 < rate ≤ 20) |
+| `property_value` ($) | `Exempt` 101,002, `NA` 28,536; median 265,000; max 2,147,483,647 | median 385,000 | reported as the **midpoint of a $10,000 bin** (always ends in 5000) |
+| `loan_amount` ($) | never missing; median 235,000 | median 325,000 | also $10,000-bin midpoints |
+| `combined_loan_to_value_ratio` | `NA` 143,243, `Exempt` 100,966 | similar | over-90 shares are robust to the extreme values (max 13.4 million) |
+| `denial_reason_1` | 1–9, `10` = not applicable, `1111` = exempt | same | also filled for `action_taken` 7 (preapproval request denied); R counts only 3 |
+| `county_code` | old CT `09001`–`09015`, `02261`; `NA` 265,280 rows (all actions) | CT planning regions, `02063`/`02066` | see 6 |
+
+- **CLTV by loan type** (share of loans with CLTV > 90%): 2019 conventional **36.0%**, FHA 92.6%, VA 88.9%, USDA 94.8%. 2025: 29.7%, 89.9%, 81.5%, 91.6%. Government loans are above 90% by program design in both years, so the Equity score uses **conventional loans only** (DECISIONS 019, 021).
+- **Binning:** `loan_amount` and `property_value` are $10,000-bin midpoints, so per-loan PTI has rounding error of up to ±$5,000 on each. That's ±2% on a $250,000 loan, and it averages out in a county median.
+- **Loan term:** PTI uses n = 360 for every loan, as specified. HMDA also has `loan_term`. A 15-year loan has a higher payment than the formula gives, so PTI understates those loans. Not changed; flagged for review.
+
+## 2. ACS 2015–2019 5-year
+
+- **The regular table-based path doesn't exist for 2019 or 2020** (404). Table-based summary files start with the 2021 vintage.
+- **Census published 2019 as a prototype:** `https://www2.census.gov/programs-surveys/acs/summary_file/2019/prototype/5YRData/acsdt5y2019-{table}.dat` (1,137 tables, `Last-Modified: 2021-01-06`).
+  - Same pipe-delimited layout, same `GEO_ID` format, and **byte-identical headers** to the 2024 files for `b25091`, `b25103`, `b25119`, `b19013`, `b11001`. `b25077` (median value, for the effective tax rate) is there too. So `pipeline/acs.py` reads them unchanged with a different URL and year.
+  - 3,220 county rows; 3,142 in the 50 states + DC (old Connecticut and `02261`, see 6).
+  - Example: Autauga County AL (`01001`) median taxes $467 (2024: $627).
+  - ⚠️ "Prototype" is Census's label for the format, not a different survey. I haven't checked values against the official sequence-based 2019 release; 4b should spot-check a few counties before relying on it.
+- **Effective tax rate:** τ = `B25103_E001` ÷ `B25077_E001` (median taxes ÷ median value), both available for 2019 and 2024. Same caveat as Phase 2b: taxes are top-coded at $10,000.
+
+## 3. Treasury FIO homeowners insurance (ZIP level, 2018–2022)
+
+- **File:** `https://home.treasury.gov/system/files/311/Supporting_Underlying_Metrics_and_Disclaimer_for_Analyses_of_US_Homeowners_Insurance_Markets_2018-2022.xlsx`
+  - 14,892,818 bytes, `Last-Modified: 2026-08-19` (re-uploaded; the release is dated January 16, 2025, with the report *Analyses of U.S. Homeowners Insurance Markets, 2018–2022*).
+  - Three sheets: *Disclaimer & Background*, *Metric Definitions*, *Supporting Underlying Metrics* (131,941 rows; the last 3,975 are blank).
+- **Fields:** `ZIP Code`, `Year`, `Policy Decile Grouping` (1–10), `Claim Frequency`, `Claim Severity`, `Loss Ratio`, **`Premiums Per Policy`** (written premium ÷ policies in force at year end), `Nonrenewal Rate`, `Nonpayment Cancellation Rate`, `Other than Nonpayment Cancellation Rate`.
+  - **No coverage amount or insured value**, and **no policy count** (only the decile group). So premium per $1,000 of coverage can't be computed; I is the average premium per policy.
+- **Scope:** HO-3 and HO-5 owner-occupied policies from the largest insurers (about 80% of premiums nationally). It **excludes residual-market plans** (e.g. Florida's Citizens) and excess & surplus lines. Published only for ZIPs with at least 10 insurers and 50 policies (22% of ZIPs dropped).
+- **Shape:** the **same 25,593 ZIPs in every year** 2018–2022. ZIPs are stored as numbers, so New England ZIPs lost their leading zero (11,410 rows with 4 digits); zero-pad to 5.
+- **Values:** premium per policy, ZIP level: 2019 median $1,469 (p1 $819, p99 $5,841); 2022 median $1,551. No zero or negative values.
+- **After 2022:** **no later release exists.** The disclaimer says the underlying NAIC data call doesn't include 2023 or 2024, and I found no newer FIO or NAIC ZIP-level release (searched Oct 2026). The current index would combine 2025 loans with 2022 premiums.
+- **Crosswalk:** ⚠️ **HUD's ZIP–county crosswalk is no longer downloadable anonymously.** The bulk `.xlsx` files return an AWS WAF browser challenge (HTTP 202, empty body), and the API returns 401 without a token. A token is free with a HUD User account.
+  - **Proposed weighting:** a county's premium = the mean of its ZIPs' premiums, weighted by the **share of the county's residential addresses in each ZIP** (HUD `COUNTY_ZIP` file, `res_ratio`), renormalized over the ZIPs FIO publishes. Null below 50% coverage.
+  - **Coverage estimate (public substitute):** the Census 2010 ZCTA-to-county relationship file, weighting by housing units (`COHUPCT`). 25,518 of 25,593 FIO ZIPs match a ZCTA.
+
+| Counties (50 states + DC) | any coverage | ≥ 25% of housing units | ≥ 50% | ≥ 80% |
+|---|---|---|---|---|
+| All 3,143 (2010 geography) | 3,093 | 3,046 | **2,992** | 2,736 |
+| Backtest set (499 CFPB counties outside CT) | 499 | n/a | **493** | 482 |
+
+  - Identical in 2019 and 2022, since the ZIP set doesn't change. Counties with no coverage are mostly in Florida (15), Alaska (14), Nebraska (6), North Dakota (6) and Montana (5).
+  - **For 4a, either:** register for a HUD token (store it as a GitHub Actions secret), or use the Census housing-unit weights, which are public but describe 2010 ZCTAs.
+
+## 4. Non-mortgage debt: Urban Institute "Debt in America"
+
+- **Downloading:** `datacatalog.urban.org` returns 403 to scripts. The interactive map's own files are open: `https://apps.urban.org/features/debt-interactive-map/data/{release}/{file}.csv`.
+- **Releases found** (folder names, from the map's script and the Internet Archive): `201911-update`, `20210323update`, `20220501-update`, `20230914-update`, `20240715-update`, `20251023-update` (current).
+- **2019-era version:** `201911-update` (`Overall_Delinquent_Debt_county.csv`, `Auto_loan_county.csv`, `Medical_Debt_county.csv`, `Student_loan_county.csv`). Its technical appendix (Dec 17, 2019) says it uses **2018** credit-bureau data (2% sample). Still served directly. The next release (Mar 2021) is mid-forbearance.
+- **Current version:** `20251023-update` (`county_overall.csv` etc.), August 2025 credit data, 4% sample.
+
+| Measure | Definition stable 2018 → 2025? | 2019 release: counties, distinct values | 2025 release: counties | Median 2018 → 2025 |
+|---|---|---|---|---|
+| Credit card delinquency rate (60+ days) | ✅ same | 2,945, **20 values** | 2,982 | 0.04 → 0.055 |
+| Auto/retail loan delinquency rate (60+ days) | ✅ same | 2,945, **20 values** | 2,856 | 0.03 → 0.053 |
+| Share with any debt in collections | ❌ medical collections were mostly removed from credit reports in 2022–23 | 2,945, 62 values | 3,071 | 0.32 → 0.23 |
+| Share with medical debt in collections | ❌ same reason; 7 states report none in 2025 | 2,945, 55 values | 3,071 | 0.19 → 0.04 |
+| Student loans | ❌ "in default" (2018) vs "60+ days delinquent or in default" (2025) | 2,945 | 2,128 | n/a |
+
+- **Problems for O:**
+  - **Rounding:** the 2019 release rounds rates to 2 decimals. Card delinquency takes only 20 distinct values across 2,945 counties, mostly 0.02–0.07, so x_O would move in steps of about 25% of the benchmark.
+  - **Comparability:** the collections measures fell because reporting rules changed, not because stress fell. Against a fixed 2019 benchmark they'd show a false improvement.
+  - **Geography:** even the 2025 release reports Connecticut by its **old 8 counties**; the map has the 9 planning regions.
+  - **Timing:** the "2019" release is 2018 data.
+- **Recommendation: leave O out of the index** and use Existing = x_S, as the design allows. If you want it anyway, the credit card delinquency rate is the only defensible candidate (stable definition), with the rounding and Connecticut caveats.
+
+## 5. BLS LAUS county unemployment (report only)
+
+- **Series:** `LAUCN{5-digit FIPS}0000000003` = unemployment rate, not seasonally adjusted, monthly. Latest: **August 2026** (preliminary). Example: `LAUCN010010000000003` (Autauga AL) = 3.2%.
+- **Bulk files** (`download.bls.gov/pub/time.series/la/la.data.64.County`, `www.bls.gov/lau/laucntyYY.xlsx`): 403 unless the request's User-Agent includes a contact email (BLS policy). Not tested with an email.
+- **API:** v1 needs no key, but allows 25 requests a day of up to 25 series, too few for 3,144 counties. v2 needs a free key (500 requests a day, 50 series each: about 63 requests for every county).
+- Not part of the index. A Phase 4+ shock layer would need either a BLS key or an email in the User-Agent.
+
+## 6. Geography for 2019
+
+| Code set | HMDA 2019 | ACS 2015–2019 | Urban (both releases) | Map / CFPB |
+|---|---|---|---|---|
+| Connecticut | 8 counties `09001`–`09015` | same | same (still in 2025) | 9 planning regions `09110`–`09190` |
+| Alaska Valdez-Cordova | `02261` | `02261` | `02261` (2019) / split (2025) | `02063` / `02066` |
+
+- Apart from these, every 2019 HMDA and ACS county code matches a map county (checked by anti-join).
+- **In the backtest set:** 8 of the 507 CFPB counties are Connecticut planning regions (`09110`, `09120`, `09130`, `09140`, `09160`, `09170`, `09180`, `09190`). The Alaska counties aren't in CFPB's file.
+- **Proposal:** exclude those 8 from the backtest, leaving **499 counties**. The planning regions don't nest within the old counties, so a crosswalk would mean apportioning by population for little gain.
+
+## 7. HMDA 2019 on this Mac
+
+| Step | Time | Disk |
+|---|---|---|
+| Download (985 MB) | 123 s | 0.99 GB zip |
+| Unzip | 20 s | 6.84 GB CSV |
+| One DuckDB pass (filter + 19 columns) | 5.0 s (2025 file: 4.0 s) | in memory, under the 8 GB cap |
+
+- Total **7.8 GB** for the zip plus CSV (the zip can be deleted after unzipping). With 2018 for robustness, about 7 GB more. 50 GB was free.
+- The 5 s pass ran with the file still in the OS cache, right after unzipping. Phase 0 measured about 40 s for a cold read of the 2025 file.

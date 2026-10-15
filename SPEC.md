@@ -54,6 +54,82 @@ Definitions, caveats and proposed legend breaks for every layer are in **`METHOD
 | 2c | `phase-2c-delinquency` | CFPB delinquency z-score against the 2017–2019 baseline, plus latest rate and pp change for the click panel |
 | 2d | `phase-2d-ui` | Grouped layer switcher, new scales, click panel with context metrics, keyboard access, table view |
 
+## Phase 4: housing stress index
+
+Two scores, one per trigger of the double trigger model (DECISIONS 020): **Burden** (can owners keep paying?) and **Equity** (could they sell or refinance their way out?). Both are built from transparent, benchmark-scaled components, and a backtest (4b) checks whether they add anything over their inputs. The shock trigger stays out of the index; county unemployment (BLS LAUS) is a later candidate.
+
+### Benchmark scaling
+Every component is divided by a benchmark: **x_i = c_i / b_i**, so 1.0 means "at the benchmark" and 1.2 means 20% above it.
+- **b_PTI = 0.28**: the traditional rule that housing should take at most 28% of gross income.
+- **Every other benchmark = the 2019 national value, held fixed.** Benchmarks are computed once from 2019 inputs, stored in `data/processed/benchmarks.json`, and **never recomputed from current data**, so a score means the same thing in every year.
+
+### Burden score
+```
+NewBuyer = mean(x_PTI, x_D, x_R)
+Existing = mean(x_S, x_O)        (just x_S if no other-debt source is usable)
+Burden   = 0.5 * NewBuyer + 0.5 * Existing
+```
+
+| Component | Definition | Source | Minimum n |
+|---|---|---|---|
+| **PTI** new-buyer payment-to-income | County **median of per-loan** PTI = (M + T + I) ÷ (income × 1000 / 12). M = L·r(1+r)^n / ((1+r)^n − 1), with L = `loan_amount`, r = `interest_rate`/100/12, n = 360. T = τ·V/12, with τ = the county effective property tax rate (ACS median taxes ÷ median value) and V = `property_value`. I = the county average homeowners premium ÷ 12 (FIO). HMDA `income` is in thousands. | HMDA, ACS, FIO | 30 valid loans |
+| **D** high-DTI share | Share of qualifying loans with DTI above 43% (the Phase 2a measure) | HMDA | 30 valid loans |
+| **R** DTI denial rate | Home-purchase applications denied with debt-to-income (code 1) as any of `denial_reason_1`–`_4`, ÷ all home-purchase applications (`action_taken` 1 originated, 2 approved not accepted, 3 denied) | HMDA | 30 applications |
+| **S** owner cost burden | Share of mortgaged owners paying 30%+ of income on owner costs (the Phase 2b measure) | ACS `B25091` | 30 mortgaged owner units |
+| **O** non-mortgage debt stress | Only if a usable county source exists (4.0: recommended **not** to use one) | n/a | n/a |
+
+- **Loans:** the Phase 2a filters (originated, home purchase, first lien, principal residence, not open-end or reverse; DECISIONS 013). R uses the same filters except `action_taken`. A loan is dropped from PTI if income, rate, amount or value is missing or invalid.
+- **One function, two vintages:** the same code computes the current scores (4a) and the 2019 scores (4b). Only the input files differ.
+
+### Equity score
+**x_CLTV = the high-CLTV share ÷ its 2019 national value**, over **conventional loans only** (DECISIONS 019, 021: in both 2019 and 2025, most FHA, VA and USDA loans are above 90% CLTV by program design).
+
+### Combining
+The weights (equal within each half, 0.5/0.5 across halves) are a **transparent choice, not fitted**. The backtest tests whether they add value; they are never tuned on its results.
+
+### Data vintages
+
+| Input | Current (4a) | Backtest (4b) | Robustness (4b) |
+|---|---|---|---|
+| HMDA | 2025 Snapshot | **2019 One-Year** | 2018 Snapshot (no 2018 One-Year file) |
+| ACS 5-year | 2020–2024 | 2015–2019 (Census prototype table-based files) | same |
+| FIO insurance | 2022 (latest; no later release) | 2019 | 2018 |
+| Other debt | not used (if O dropped) | not used | not used |
+
+### Backtest (4b)
+- **Outcome**, per CFPB county: mean 90+ day delinquency rate over 2023-01 to 2025-12 minus the mean over 2017-01 to 2019-12, in percentage points. 2020–2022 are excluded (forbearance). The 8 Connecticut planning regions are excluded (2019 inputs use the old counties), leaving **499 counties** (DECISIONS 022).
+- **Metrics:** Spearman rank correlation of score and outcome; the outcome by score quintile (mean change, and share of counties that rose); 95% bootstrap confidence intervals (1,000 resamples of counties).
+- **Baselines:** the same metrics for each single component, and for median income alone. The key question: **does Burden beat its best single input?**
+- **Robustness:** HMDA 2018 inputs; outcome window 2024–2025.
+- **Report:** a results table, a score-vs-outcome scatter and quintile bars (PNG), and a plain-language summary of what the evidence does and doesn't support.
+- Run once; results committed. **Not** part of the scheduled refresh. Weights and benchmarks are never changed after seeing the results; any change is decided by the owner and logged in DECISIONS with the reason.
+
+### Map integration (4c)
+- A new **Index** layer group with the Burden and Equity scores: diverging scale with midpoint 1.0 = benchmark; legend "Below benchmark / Above benchmark".
+- A **bivariate view**, Burden × Equity, as a 3×3 colorblind-safe grid with a square legend; the high-high corner reads "both triggers loaded".
+- Click panel: an **Index** section with both scores and every component, each showing its value and its x_i.
+- Table view and keyboard access cover the new layers.
+
+### Validation (4a)
+- Anti-join against the map; bounds: PTI between 0.05 and 1.5, scores between 0.2 and 5; county counts per component; a **warning** where a county's score rests on fewer than 3 components.
+
+### Delivery: five PRs, each branched from an up-to-date `main`
+| PR | Branch | Scope |
+|---|---|---|
+| 4.0 | `phase-4-spike` | Data spike (DATA_SOURCES.md) and this design. **Stop for review.** |
+| 4a | `phase-4a-index` | Index pipeline on current data, unit tests, `burden.json`, `equity.json`, `benchmarks.json`, validation, scheduled refresh |
+| 4b | `phase-4b-backtest` | Backtest on 2019 inputs, baselines, robustness, report. **Stop for review.** |
+| 4c | `phase-4c-map` | Index layers, bivariate view, panel, table, keyboard. Starts only after 4b is approved. |
+| 4d | `phase-4d-writeup` | Methodology page on the site with formulas, vintages, backtest results and limitations; linked from the map intro |
+
+### Open questions from the 4.0 spike (owner decides before 4a)
+1. **O (non-mortgage debt):** drop it (Existing = x_S), or use the credit card delinquency rate with its caveats? DATA_SOURCES.md §4 recommends dropping it.
+2. **ZIP-to-county for insurance:** register for a free HUD API token (stored as a GitHub Actions secret), or use the public Census 2010 ZCTA housing-unit weights? DATA_SOURCES.md §3.
+3. **Validity bounds for PTI inputs:** proposed `0 < interest_rate ≤ 20` and `income > 0`. 2019 has rates up to 5,625%.
+4. **Loan term:** n = 360 for every loan as specified, or each loan's own `loan_term`?
+5. **2018 robustness inputs:** HMDA 2018 Snapshot (no One-Year file exists), against One-Year for 2019.
+6. **ACS 2019 prototype files:** accept them after a spot-check against the official release in 4b.
+
 ## Architecture
 
 ```
@@ -82,7 +158,7 @@ sources → pipeline/ (Python + DuckDB) → data/processed/*.json → site/ (D3 
 | 1 | Median income layer end-to-end (DECISIONS 009) | Live URL with one working choropleth |
 | 2 | Mortgage-risk layers by role (see Phase 2 above), shipped as PRs 2a–2d | All outcome, burden and equity layers working with benchmark color scales; layer switcher grouped by role; county click panel with context metrics; every county reachable by keyboard (focus shows the same tooltip and panel as hover/click); a table view lists every county's values for the active layer |
 | 3 | GitHub Actions scheduled refresh + validation | Unattended run passes |
-| 4 | Housing stress index + backtest. Candidates: county unemployment (BLS LAUS) as the shock trigger; a mortgage demand model | Write-up on the portfolio |
+| 4 | Housing stress index (Burden and Equity scores) + backtest + map integration + write-up, shipped as PRs 4.0–4d (see Phase 4 above). County unemployment (BLS LAUS) stays a later shock-trigger candidate | Backtest results reviewed; Index layers live; methodology page on the site, linked from the map |
 
 ## Out of scope for v1
 Total tax burden (state income and sales taxes), AI Q&A, zoom below county level, and time-series animation.

@@ -120,3 +120,35 @@ Each entry: the decision, the alternatives, and why. Newest at the bottom.
 - **Over:** all loan types with breaks 40–80% (as built in 2a/2d); all loan types with the government share as a caveat only.
 - **Why:** FHA, VA and USDA loans are above 90% CLTV by program design (90.0%, 81.4%, 91.9% nationally, against 29.7% for conventional). With them included, a county's share tracked its government-loan share (correlation 0.76), so the equity layer mostly mapped where FHA/VA lending is common. Conventional only, the correlation falls to 0.22 and the layer shows thin equity chosen within a standard product. The government share stays one click away so that thin equity isn't hidden. The 30% break sits at the national conventional share; the classes hold 167/532/833/584/215 counties.
 - **Cost accepted:** 314 fewer counties have a value (2,331 vs 2,645), mostly rural counties where government lending dominates, and the layer no longer shows the FHA/VA thin-equity risk on the map itself. The validation floor for this layer drops to 2,100.
+
+## 020 — Housing stress index: two benchmark-scaled scores with fixed weights (2026-10-15)
+- **Chose:** two scores matching the double trigger model. **Burden** = 0.5 × NewBuyer + 0.5 × Existing, where NewBuyer = mean(x_PTI, x_D, x_R) and Existing = mean(x_S, x_O), or x_S alone if no other-debt source is usable. **Equity** = x_CLTV. Each component is scaled as x_i = c_i / b_i, with b_PTI = 0.28 and every other benchmark the **2019 national value, fixed** and stored in `benchmarks.json`. PTI is computed per loan from HMDA (principal and interest at n = 360, plus property tax from the county effective rate and insurance from FIO), then the county median. Full definitions in SPEC Phase 4.
+- **Over:** a single combined index; weights fitted to delinquency (regression or machine learning); z-scores or percentiles against the current cross-section; benchmarks recomputed each year; PTI from county medians (median loan ÷ median income).
+- **Why:**
+  - **Two scores, not one.** The double trigger theory says burden and equity fail in different ways. Adding them would let a county with thin equity but low burden look as stressed as one with both, which is the case that matters.
+  - **Benchmark scaling.** "1.2 = 20% above benchmark" can be read without a statistics background, and components on different scales (a ratio, shares) become comparable.
+  - **Fixed 2019 benchmarks.** Benchmarks recomputed from current data would always center the map on "average", like quantile colors (DECISIONS 011), so a score would mean something different every year. 2019 is the last pre-pandemic year and the backtest's baseline year.
+  - **Weights chosen, not fitted.** With 499 backtest counties, fitted weights would largely describe that sample. A stated choice can be tested honestly once (4b), and the test result reported whatever it is.
+  - **PTI per loan.** A ratio of medians mixes different borrowers (the median loan isn't taken out by the median-income buyer). Per-loan PTI is each buyer's own payment against their own income.
+- **Cost accepted:** equal weights are arbitrary, and the backtest may show the scores add little over their best single input. That's a reportable result, not a reason to tune. The scores mix vintages: 2025 loans, 2020–2024 ACS, 2022 insurance. 2019 benchmarks age, and a 2019 "normal" isn't a target.
+
+## 021 — Equity score uses conventional loans only (2026-10-15)
+- **Chose:** x_CLTV is the conventional-loan CLTV > 90% share (`loan_type` 1), ÷ its 2019 national conventional value.
+- **Over:** all loan types.
+- **Why:** the loan-type check in DECISIONS 019 holds in 2019 too. CLTV > 90%: conventional **36.0%**, FHA 92.6%, VA 88.9%, USDA 94.8% (2025: 29.7%, 89.9%, 81.5%, 91.6%). With government loans included, the score would mostly map where FHA/VA lending is common.
+- **Cost accepted:** the same as 019: counties dominated by government lending fall below the 30-loan threshold more often, and FHA/VA thin equity isn't in the score. The government share stays in the click panel.
+
+## 022 — Backtest design: 2019 inputs, 2023–2025 vs 2017–2019 outcome, Connecticut excluded (2026-10-15)
+- **Chose:**
+  - Score each CFPB county from **2019 inputs** with the same code as the current index.
+  - Outcome = the county's mean 90+ day delinquency rate over 2023-01 to 2025-12 minus its mean over 2017-01 to 2019-12, in percentage points. 2020–2022 are excluded.
+  - Measure with Spearman correlation, quintile means and the share of counties that rose, with 1,000-resample bootstrap CIs. Compare against each single component and median income alone. Check robustness with HMDA 2018 inputs and a 2024–2025 outcome window.
+  - **Exclude the 8 Connecticut planning regions** in CFPB's file, leaving 499 counties.
+  - Run once; commit the results. Never tune weights or benchmarks afterwards.
+- **Over:** a crosswalk from Connecticut's old counties to planning regions; including 2020–2022; a random train/test split.
+- **Why:**
+  - **2020–2022 excluded:** CARES Act forbearance kept missed payments from being reported as delinquent (DECISIONS 012), so those years understate stress.
+  - **Connecticut:** 2019 HMDA and ACS use the old 8 counties, and the planning regions don't nest within them, so a crosswalk would apportion by population for 8 of 507 counties. Alaska's Valdez-Cordova split doesn't affect the set, since CFPB doesn't publish those counties.
+  - **Run once:** a test that can be re-run until it passes isn't a test.
+  - **Single-input baselines:** an index is only worth its complexity if it beats the best of its parts.
+- **Cost accepted:** 499 counties, mostly metropolitan (CFPB's coverage rule, DECISIONS 007), so the result says nothing about rural counties. One outcome window, in a period with its own shocks (rate rises, insurance costs), so a null result doesn't prove the theory wrong, and a positive one doesn't prove it right.
