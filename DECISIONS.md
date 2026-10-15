@@ -152,3 +152,44 @@ Each entry: the decision, the alternatives, and why. Newest at the bottom.
   - **Run once:** a test that can be re-run until it passes isn't a test.
   - **Single-input baselines:** an index is only worth its complexity if it beats the best of its parts.
 - **Cost accepted:** 499 counties, mostly metropolitan (CFPB's coverage rule, DECISIONS 007), so the result says nothing about rural counties. One outcome window, in a period with its own shocks (rate rises, insurance costs), so a null result doesn't prove the theory wrong, and a positive one doesn't prove it right.
+
+## 023 — Drop O (non-mortgage debt) from the Burden score (2026-10-15)
+- **Chose:** Existing = x_S alone. No non-mortgage debt component.
+- **Over:** the Urban Institute credit card delinquency rate as O; any of its collections measures.
+- **Why:**
+  - **Rounding.** The only 2019-era release (`201911-update`, built on 2018 credit data) rounds rates to 2 decimals. Card delinquency takes just **20 distinct values** across 2,945 counties, mostly 0.02–0.07, so x_O would move in steps of about 25% of its benchmark and rank counties mostly by rounding.
+  - **A structural break.** From 2022 the credit bureaus stopped reporting most medical collections: the median county's share with medical debt in collections fell from 0.19 to 0.04, and with any debt in collections from 0.32 to 0.23. That's a change in reporting, not in stress, and against a fixed 2019 benchmark it would read as improvement. Student loans also changed from "in default" to "delinquent or in default".
+  - Urban still reports Connecticut by its old counties in 2025.
+- **Cost accepted:** **non-mortgage debt enters the score only through D and R**, i.e. through new buyers' debt-to-income ratios and denials. Existing owners' card, auto and student debt isn't measured. Listed as a limitation (SPEC Phase 4).
+
+## 024 — Insurance premiums: HUD crosswalk run once, locally; county tables committed (2026-10-15)
+- **Chose:** convert FIO ZIP premiums to counties with the HUD USPS crosswalk via a HUD API token kept in a git-ignored `.env` on this Mac. Run once per FIO year used, and **commit the county-level premium tables** to `data/processed/`. Use the **Q4 2019** crosswalk for the 2019 premiums (2019 county codes, as in the backtest inputs) and a **recent** crosswalk for 2022 (current county codes, matching the map). The county premium is the residential-address-weighted mean of its ZIPs' premiums, renormalized over the ZIPs FIO publishes, and null below 50% coverage.
+- **Over:** storing the token as a GitHub Actions secret and converting on every refresh; the public Census 2010 ZCTA housing-unit weights; one crosswalk for both years.
+- **Why:** FIO data is a one-off release (2018–2022, nothing newer), so there's nothing for a scheduled job to refresh. Committing the result keeps the token off GitHub and the refresh free of a dependency on a login-gated service. HUD's crosswalk reflects USPS addresses at the time, and using the crosswalk from the same period as the premiums keeps each year's county codes consistent with its other inputs.
+- **Cost accepted:** the county tables can only be rebuilt on a machine with the token. Their provenance (crosswalk year and quarter, retrieval date, input file hash) is recorded in `meta.json` so they can be audited.
+
+## 025 — PTI loan rules and loan term (2026-10-15)
+- **Chose:**
+  - **n = each loan's own `loan_term`** (months), falling back to **360 only when it's `NA` or `Exempt`**; the fallbacks are counted.
+  - **Exclude interest-only, balloon and negative-amortization loans** (flag = `1`; `1111` exempt stays in, as in DECISIONS 013). The amortization formula doesn't describe their payments.
+  - **Keep a loan only if** `0 < interest_rate ≤ 20`, `loan_amount > 0` and `property_value > 0`, `income ≥ 10` ($10,000), and the computed **PTI ≤ 1.0**. Also, the county must have a tax rate and an insurance premium, since T and I need them.
+  - Report the loans removed by each rule, nationally and per county, and **flag counties that lose more than 10%** of their loans.
+  - The amortization unit test includes a 15-year case.
+- **Over:** n = 360 for every loan; validity bounds of `rate > 0` and `income > 0` only; trimming by percentiles.
+- **Why:**
+  - **Loan term.** 15-year loans have much higher payments than a 30-year formula gives (3.6% of qualifying 2019 loans and 2.3% of 2025 loans have a 180-month term), so a fixed 360 would understate PTI where they're common.
+  - **The bounds.** 2019 has interest rates up to 5,625% and incomes of $0 or less, which are reporting errors. An income below $10,000 for a home buyer is almost always a placeholder or a misreported unit, and a payment above 100% of income isn't a real loan.
+  - **Per-rule counts and the flag** keep the rules auditable and show where they bite.
+- **Cost accepted:** the rules are judgment calls. The PTI ≤ 1.0 cap trims the extreme tail, so PTI medians lean very slightly low where such loans cluster. Counties without an insurance premium or tax rate get no PTI, and so a NewBuyer half of only D and R.
+
+## 026 — 2018 robustness inputs: HMDA Snapshot, alongside 2019 One-Year (2026-10-15)
+- **Chose:** the 4b robustness run uses the **2018 Snapshot** HMDA file; the main backtest uses the **2019 One-Year** file.
+- **Over:** dropping the 2018 check; switching 2019 to Snapshot so both match.
+- **Why:** FFIEC publishes no 2018 One-Year file (404 at every path tried; the Data Browser serves 2018 from the Three-Year dataset). One-Year is the more complete view of 2019, and the difference between the two dataset types is resubmitted records only.
+- **Cost accepted:** the two runs differ slightly in dataset type as well as year. Recorded in `meta.json` and in the 4b report.
+
+## 027 — ACS 2015–2019 from the Census prototype table-based files (2026-10-15)
+- **Chose:** read 2019 ACS tables from `summary_file/2019/prototype/5YRData/acsdt5y2019-{table}.dat` with the existing reader.
+- **Over:** parsing the official sequence-based summary files; the Census API (needs a key).
+- **Why:** table-based files exist from 2021 onward only, and 2019 is published in that format only as a "prototype". A **spot-check against the official sequence-based 2019 release** (run 2026-10-15) compared every county in 10 states (AL, AK, CA, CT, DE, DC, FL, NY, TX, VT): **563 counties, all six tables** (B11001, B19013, B25077, B25091, B25103, B25119), **45,040 cells (every estimate and MOE), 0 mismatches**. 99 cells are unavailable in both, each file using its own missing-value code.
+- **Cost accepted:** a check of 10 states, not all 51. The headers are identical to 2024, so a format error elsewhere would also have shown up in these states.

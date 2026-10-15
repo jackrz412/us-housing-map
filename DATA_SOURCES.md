@@ -126,10 +126,10 @@ Run 2026-10-14/15 for the index and backtest in SPEC Phase 4. Samples only; no p
 
 | # | Source | Needed for | Verdict |
 |---|---|---|---|
-| 1 | HMDA 2019 One-Year | PTI, D, R, CLTV as of 2019 | ✅ Every field present with the same codes as 2025. Needs validity bounds for `interest_rate` and `income` (below). 2018 has no One-Year file at the usual path. |
-| 2 | ACS 2015–2019 5-year | S, effective tax rate as of 2019 | ✅ Table-based files exist, but only under the Census **prototype** folder. Same headers as 2024. |
-| 3 | Treasury FIO homeowners insurance | I (insurance in PTI) | ✅ Usable, 2018–2022 only, nothing newer. ⚠️ The HUD crosswalk now needs a registered token. Coverage estimated with a public Census substitute. |
-| 4 | Urban Institute "Debt in America" | O (non-mortgage debt) | ⚠️ A 2019-era release exists (2018 credit data), but its rates are rounded to 2 decimals, and the measures that would vary most changed definition after 2022. **Recommendation: leave O out; Existing = x_S.** |
+| 1 | HMDA 2019 One-Year | PTI, D, R, CLTV as of 2019 | ✅ Every field present with the same codes as 2025. Validity rules in DECISIONS 025. 2018 has no One-Year file; Snapshot used for robustness (DECISIONS 026). |
+| 2 | ACS 2015–2019 5-year | S, effective tax rate as of 2019 | ✅ Table-based files exist only under the Census **prototype** folder. Same headers as 2024; spot-check vs the official release: 0 mismatches in 45,040 cells (DECISIONS 027). |
+| 3 | Treasury FIO homeowners insurance | I (insurance in PTI) | ✅ Usable, 2018–2022 only, nothing newer. HUD crosswalk needs a token: run once locally, county tables committed (DECISIONS 024). |
+| 4 | Urban Institute "Debt in America" | O (non-mortgage debt) | ⚠️ A 2019-era release exists (2018 credit data), but its rates are rounded to 2 decimals, and the measures that would vary most changed definition after 2022. **Decided: O left out; Existing = x_S (DECISIONS 023).** |
 | 5 | BLS LAUS county unemployment | report only | ✅ Monthly through Aug 2026. Bulk files need a contact email in the request; the keyless API is too rate-limited for 3,144 counties. |
 | 6 | 2019 geography | backtest | Connecticut's 8 old counties and Alaska's Valdez-Cordova (`02261`). **8 of the 507 CFPB counties are affected** (all Connecticut). |
 | 7 | HMDA 2019 size and time | planning | 985 MB zip, 6.8 GB CSV. Download ~2 min, unzip 20 s, one DuckDB pass ~5 s warm. |
@@ -160,7 +160,17 @@ Run 2026-10-14/15 for the index and backtest in SPEC Phase 4. Samples only; no p
 
 - **CLTV by loan type** (share of loans with CLTV > 90%): 2019 conventional **36.0%**, FHA 92.6%, VA 88.9%, USDA 94.8%. 2025: 29.7%, 89.9%, 81.5%, 91.6%. Government loans are above 90% by program design in both years, so the Equity score uses **conventional loans only** (DECISIONS 019, 021).
 - **Binning:** `loan_amount` and `property_value` are $10,000-bin midpoints, so per-loan PTI has rounding error of up to ±$5,000 on each. That's ±2% on a $250,000 loan, and it averages out in a county median.
-- **Loan term:** PTI uses n = 360 for every loan, as specified. HMDA also has `loan_term`. A 15-year loan has a higher payment than the formula gives, so PTI understates those loans. Not changed; flagged for review.
+- **Loan term and payment features** (qualifying originations):
+
+| Field | 2019 | 2025 |
+|---|---|---|
+| `loan_term` 360 / 180 months | 3,478,862 / 138,704 | 2,704,368 / 68,640 |
+| `loan_term` `Exempt` / `NA` (→ 360, DECISIONS 025) | 100,847 / 2,990 | 69,026 / 3,785 |
+| `loan_term` > 480 months | 123 | 4 |
+| `interest_only_payment` = 1 (excluded) | 54,209 | 47,269 |
+| `balloon_payment` = 1 (excluded) | 7,989 | 8,018 |
+| `negative_amortization` = 1 (excluded) | 179 | 4,061 |
+| Payment-feature flags `1111` (exempt, kept) | 100,925 | 69,245 |
 
 ## 2. ACS 2015–2019 5-year
 
@@ -169,7 +179,7 @@ Run 2026-10-14/15 for the index and backtest in SPEC Phase 4. Samples only; no p
   - Same pipe-delimited layout, same `GEO_ID` format, and **byte-identical headers** to the 2024 files for `b25091`, `b25103`, `b25119`, `b19013`, `b11001`. `b25077` (median value, for the effective tax rate) is there too. So `pipeline/acs.py` reads them unchanged with a different URL and year.
   - 3,220 county rows; 3,142 in the 50 states + DC (old Connecticut and `02261`, see 6).
   - Example: Autauga County AL (`01001`) median taxes $467 (2024: $627).
-  - ⚠️ "Prototype" is Census's label for the format, not a different survey. I haven't checked values against the official sequence-based 2019 release; 4b should spot-check a few counties before relying on it.
+  - "Prototype" is Census's label for the format, not a different survey. **Spot-check against the official sequence-based 2019 release (2026-10-15): every county in AL, AK, CA, CT, DE, DC, FL, NY, TX and VT (563), every cell of B11001, B19013, B25077, B25091, B25103 and B25119, estimates and MOEs: 45,040 cells, 0 mismatches.** 99 cells are unavailable in both (each file uses its own missing-value code). Official files: `summary_file/2019/data/5_year_seq_by_state/{State}/All_Geographies_Not_Tracts_Block_Groups/20195{st}{seq}000.zip`, with sequence and start position from `documentation/user_tools/ACS_5yr_Seq_Table_Number_Lookup.txt`. Accepted (DECISIONS 027).
 - **Effective tax rate:** τ = `B25103_E001` ÷ `B25077_E001` (median taxes ÷ median value), both available for 2019 and 2024. Same caveat as Phase 2b: taxes are top-coded at $10,000.
 
 ## 3. Treasury FIO homeowners insurance (ZIP level, 2018–2022)
@@ -193,7 +203,7 @@ Run 2026-10-14/15 for the index and backtest in SPEC Phase 4. Samples only; no p
 | Backtest set (499 CFPB counties outside CT) | 499 | n/a | **493** | 482 |
 
   - Identical in 2019 and 2022, since the ZIP set doesn't change. Counties with no coverage are mostly in Florida (15), Alaska (14), Nebraska (6), North Dakota (6) and Montana (5).
-  - **For 4a, either:** register for a HUD token (store it as a GitHub Actions secret), or use the Census housing-unit weights, which are public but describe 2010 ZCTAs.
+  - **Decided (DECISIONS 024):** a HUD token in a git-ignored `.env`, used locally only. The county premium tables are computed once (Q4 2019 crosswalk for 2019 premiums, a recent one for 2022) and committed; no secret in GitHub Actions.
 
 ## 4. Non-mortgage debt: Urban Institute "Debt in America"
 
@@ -215,7 +225,7 @@ Run 2026-10-14/15 for the index and backtest in SPEC Phase 4. Samples only; no p
   - **Comparability:** the collections measures fell because reporting rules changed, not because stress fell. Against a fixed 2019 benchmark they'd show a false improvement.
   - **Geography:** even the 2025 release reports Connecticut by its **old 8 counties**; the map has the 9 planning regions.
   - **Timing:** the "2019" release is 2018 data.
-- **Recommendation: leave O out of the index** and use Existing = x_S, as the design allows. If you want it anyway, the credit card delinquency rate is the only defensible candidate (stable definition), with the rounding and Connecticut caveats.
+- **Decided: O is left out** of the index; Existing = x_S (DECISIONS 023).
 
 ## 5. BLS LAUS county unemployment (report only)
 

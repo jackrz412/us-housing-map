@@ -66,19 +66,27 @@ Every component is divided by a benchmark: **x_i = c_i / b_i**, so 1.0 means "at
 ### Burden score
 ```
 NewBuyer = mean(x_PTI, x_D, x_R)
-Existing = mean(x_S, x_O)        (just x_S if no other-debt source is usable)
+Existing = x_S                   (O dropped: DECISIONS 023)
 Burden   = 0.5 * NewBuyer + 0.5 * Existing
 ```
 
 | Component | Definition | Source | Minimum n |
 |---|---|---|---|
-| **PTI** new-buyer payment-to-income | County **median of per-loan** PTI = (M + T + I) ÷ (income × 1000 / 12). M = L·r(1+r)^n / ((1+r)^n − 1), with L = `loan_amount`, r = `interest_rate`/100/12, n = 360. T = τ·V/12, with τ = the county effective property tax rate (ACS median taxes ÷ median value) and V = `property_value`. I = the county average homeowners premium ÷ 12 (FIO). HMDA `income` is in thousands. | HMDA, ACS, FIO | 30 valid loans |
+| **PTI** new-buyer payment-to-income | County **median of per-loan** PTI = (M + T + I) ÷ (income × 1000 / 12). M = L·r(1+r)^n / ((1+r)^n − 1), with L = `loan_amount`, r = `interest_rate`/100/12, n = the loan's own `loan_term` in months (360 when it is `NA` or `Exempt`). T = τ·V/12, with τ = the county effective property tax rate (ACS median taxes ÷ median value) and V = `property_value`. I = the county average homeowners premium ÷ 12 (FIO, via the committed county premium tables). HMDA `income` is in thousands. | HMDA, ACS, FIO | 30 valid loans |
 | **D** high-DTI share | Share of qualifying loans with DTI above 43% (the Phase 2a measure) | HMDA | 30 valid loans |
 | **R** DTI denial rate | Home-purchase applications denied with debt-to-income (code 1) as any of `denial_reason_1`–`_4`, ÷ all home-purchase applications (`action_taken` 1 originated, 2 approved not accepted, 3 denied) | HMDA | 30 applications |
 | **S** owner cost burden | Share of mortgaged owners paying 30%+ of income on owner costs (the Phase 2b measure) | ACS `B25091` | 30 mortgaged owner units |
-| **O** non-mortgage debt stress | Only if a usable county source exists (4.0: recommended **not** to use one) | n/a | n/a |
+| ~~**O** non-mortgage debt stress~~ | **Dropped** (DECISIONS 023). Non-mortgage debt enters only through D and R, i.e. for new buyers. | n/a | n/a |
 
-- **Loans:** the Phase 2a filters (originated, home purchase, first lien, principal residence, not open-end or reverse; DECISIONS 013). R uses the same filters except `action_taken`. A loan is dropped from PTI if income, rate, amount or value is missing or invalid.
+- **Loans:** the Phase 2a filters (originated, home purchase, first lien, principal residence, not open-end or reverse; DECISIONS 013). R uses the same filters except `action_taken`.
+- **PTI loan rules (DECISIONS 025).** A loan counts toward PTI only if **all** of these hold, checked in this order:
+  1. not interest-only, balloon or negative-amortization (`interest_only_payment`, `balloon_payment`, `negative_amortization` ≠ `1`; `1111` exempt stays in, as in DECISIONS 013);
+  2. `0 < interest_rate ≤ 20`;
+  3. `loan_amount > 0` and `property_value > 0`;
+  4. `income ≥ 10` ($10,000);
+  5. the county has a tax rate and an insurance premium;
+  6. computed **PTI ≤ 1.0**.
+- The pipeline reports the loans removed by each rule, nationally and per county, and **flags counties that lose more than 10%** of their loans. It counts the loans whose `loan_term` fell back to 360.
 - **One function, two vintages:** the same code computes the current scores (4a) and the 2019 scores (4b). Only the input files differ.
 
 ### Equity score
@@ -92,9 +100,11 @@ The weights (equal within each half, 0.5/0.5 across halves) are a **transparent 
 | Input | Current (4a) | Backtest (4b) | Robustness (4b) |
 |---|---|---|---|
 | HMDA | 2025 Snapshot | **2019 One-Year** | 2018 Snapshot (no 2018 One-Year file) |
-| ACS 5-year | 2020–2024 | 2015–2019 (Census prototype table-based files) | same |
-| FIO insurance | 2022 (latest; no later release) | 2019 | 2018 |
-| Other debt | not used (if O dropped) | not used | not used |
+| ACS 5-year | 2020–2024 | 2015–2019 (Census prototype table-based files; spot-checked, DECISIONS 027) | same |
+| FIO insurance | 2022 premiums, recent HUD crosswalk (latest FIO year; no later release) | 2019 premiums, Q4 2019 HUD crosswalk | 2018 premiums |
+| Other debt | not used (DECISIONS 023) | not used | not used |
+
+FIO premiums are converted to counties **once, locally** (the HUD token is in a git-ignored `.env`, never in GitHub Actions), and the resulting county premium tables are committed under `data/processed/` (DECISIONS 024). The scheduled refresh reads those tables and never calls HUD.
 
 ### Backtest (4b)
 - **Outcome**, per CFPB county: mean 90+ day delinquency rate over 2023-01 to 2025-12 minus the mean over 2017-01 to 2019-12, in percentage points. 2020–2022 are excluded (forbearance). The 8 Connecticut planning regions are excluded (2019 inputs use the old counties), leaving **499 counties** (DECISIONS 022).
@@ -111,7 +121,10 @@ The weights (equal within each half, 0.5/0.5 across halves) are a **transparent 
 - Table view and keyboard access cover the new layers.
 
 ### Validation (4a)
-- Anti-join against the map; bounds: PTI between 0.05 and 1.5, scores between 0.2 and 5; county counts per component; a **warning** where a county's score rests on fewer than 3 components.
+- Anti-join against the map; bounds: county PTI between 0.05 and 1.5, scores between 0.2 and 5; county counts per component; a **warning** where a county's score rests on fewer than 3 components.
+
+### Unit tests (4a)
+Known answers, including: amortization ($300,000 at 6.5% over 30 years ≈ $1,896.20 a month, plus a 15-year case); benchmark scaling; the DTI-bin mapping; denial-reason matching; the PTI loan rules.
 
 ### Delivery: five PRs, each branched from an up-to-date `main`
 | PR | Branch | Scope |
@@ -122,13 +135,22 @@ The weights (equal within each half, 0.5/0.5 across halves) are a **transparent 
 | 4c | `phase-4c-map` | Index layers, bivariate view, panel, table, keyboard. Starts only after 4b is approved. |
 | 4d | `phase-4d-writeup` | Methodology page on the site with formulas, vintages, backtest results and limitations; linked from the map intro |
 
-### Open questions from the 4.0 spike (owner decides before 4a)
-1. **O (non-mortgage debt):** drop it (Existing = x_S), or use the credit card delinquency rate with its caveats? DATA_SOURCES.md §4 recommends dropping it.
-2. **ZIP-to-county for insurance:** register for a free HUD API token (stored as a GitHub Actions secret), or use the public Census 2010 ZCTA housing-unit weights? DATA_SOURCES.md §3.
-3. **Validity bounds for PTI inputs:** proposed `0 < interest_rate ≤ 20` and `income > 0`. 2019 has rates up to 5,625%.
-4. **Loan term:** n = 360 for every loan as specified, or each loan's own `loan_term`?
-5. **2018 robustness inputs:** HMDA 2018 Snapshot (no One-Year file exists), against One-Year for 2019.
-6. **ACS 2019 prototype files:** accept them after a spot-check against the official release in 4b.
+### Decisions from the 4.0 review (2026-10-15)
+1. **O dropped**; Existing = x_S (DECISIONS 023).
+2. **Insurance crosswalk:** HUD token used locally only; county premium tables computed once and committed; Q4 2019 crosswalk for 2019 premiums, a recent one for 2022 (DECISIONS 024).
+3. **PTI loan rules:** as listed under Burden score, with per-rule counts and a >10% county flag (DECISIONS 025).
+4. **Loan term:** each loan's own `loan_term`, 360 when missing or exempt; interest-only, balloon and negative-amortization loans excluded; a 15-year amortization unit test (DECISIONS 025).
+5. **2018 robustness:** HMDA 2018 Snapshot alongside 2019 One-Year (DECISIONS 026).
+6. **ACS 2019 prototype files accepted** after a spot-check: 563 counties in 10 states, 45,040 cells, all six tables, 0 mismatches (DECISIONS 027).
+
+### Limitations (carried into the 4d write-up)
+- **Non-mortgage debt enters only through D and R**, i.e. only for new buyers. Existing owners' card, auto and student debt isn't in the score (DECISIONS 023).
+- **The current score pairs 2025 loans with 2022 insurance premiums, unadjusted.** FIO has no later data, and premiums rose faster than inflation in 2018–2022, so I is likely understated for 2025 buyers.
+- Insurance is the average premium per policy for HO-3/HO-5 policies from the largest insurers. It excludes residual-market plans (e.g. Florida's Citizens) and excess & surplus lines.
+- The backtest covers 499 mostly metropolitan counties (CFPB's coverage rule).
+- The outcome skips 2020–2022 (the forbearance gap).
+- Timing: the new-buyer half describes recent buyers, while the outcome is delinquency across all existing mortgages.
+- The weights are a choice, not an estimate.
 
 ## Architecture
 
