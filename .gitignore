@@ -3,3 +3,5 @@ __pycache__/
 .DS_Store
 _site/
 .venv/
+# Local secrets (HUD API token, DECISIONS 024). Never committed.
+.env

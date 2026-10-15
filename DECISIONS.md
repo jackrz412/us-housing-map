@@ -120,3 +120,76 @@ Each entry: the decision, the alternatives, and why. Newest at the bottom.
 - **Over:** all loan types with breaks 40–80% (as built in 2a/2d); all loan types with the government share as a caveat only.
 - **Why:** FHA, VA and USDA loans are above 90% CLTV by program design (90.0%, 81.4%, 91.9% nationally, against 29.7% for conventional). With them included, a county's share tracked its government-loan share (correlation 0.76), so the equity layer mostly mapped where FHA/VA lending is common. Conventional only, the correlation falls to 0.22 and the layer shows thin equity chosen within a standard product. The government share stays one click away so that thin equity isn't hidden. The 30% break sits at the national conventional share; the classes hold 167/532/833/584/215 counties.
 - **Cost accepted:** 314 fewer counties have a value (2,331 vs 2,645), mostly rural counties where government lending dominates, and the layer no longer shows the FHA/VA thin-equity risk on the map itself. The validation floor for this layer drops to 2,100.
+
+## 020 — Housing stress index: two benchmark-scaled scores with fixed weights (2026-10-15)
+- **Chose:** two scores matching the double trigger model. **Burden** = 0.5 × NewBuyer + 0.5 × Existing, where NewBuyer = mean(x_PTI, x_D, x_R) and Existing = mean(x_S, x_O), or x_S alone if no other-debt source is usable. **Equity** = x_CLTV. Each component is scaled as x_i = c_i / b_i, with b_PTI = 0.28 and every other benchmark the **2019 national value, fixed** and stored in `benchmarks.json`. PTI is computed per loan from HMDA (principal and interest at n = 360, plus property tax from the county effective rate and insurance from FIO), then the county median. Full definitions in SPEC Phase 4.
+- **Over:** a single combined index; weights fitted to delinquency (regression or machine learning); z-scores or percentiles against the current cross-section; benchmarks recomputed each year; PTI from county medians (median loan ÷ median income).
+- **Why:**
+  - **Two scores, not one.** The double trigger theory says burden and equity fail in different ways. Adding them would let a county with thin equity but low burden look as stressed as one with both, which is the case that matters.
+  - **Benchmark scaling.** "1.2 = 20% above benchmark" can be read without a statistics background, and components on different scales (a ratio, shares) become comparable.
+  - **Fixed 2019 benchmarks.** Benchmarks recomputed from current data would always center the map on "average", like quantile colors (DECISIONS 011), so a score would mean something different every year. 2019 is the last pre-pandemic year and the backtest's baseline year.
+  - **Weights chosen, not fitted.** With 499 backtest counties, fitted weights would largely describe that sample. A stated choice can be tested honestly once (4b), and the test result reported whatever it is.
+  - **PTI per loan.** A ratio of medians mixes different borrowers (the median loan isn't taken out by the median-income buyer). Per-loan PTI is each buyer's own payment against their own income.
+- **Cost accepted:** equal weights are arbitrary, and the backtest may show the scores add little over their best single input. That's a reportable result, not a reason to tune. The scores mix vintages: 2025 loans, 2020–2024 ACS, 2022 insurance. 2019 benchmarks age, and a 2019 "normal" isn't a target.
+
+## 021 — Equity score uses conventional loans only (2026-10-15)
+- **Chose:** x_CLTV is the conventional-loan CLTV > 90% share (`loan_type` 1), ÷ its 2019 national conventional value.
+- **Over:** all loan types.
+- **Why:** the loan-type check in DECISIONS 019 holds in 2019 too. CLTV > 90%: conventional **36.0%**, FHA 92.6%, VA 88.9%, USDA 94.8% (2025: 29.7%, 89.9%, 81.5%, 91.6%). With government loans included, the score would mostly map where FHA/VA lending is common.
+- **Cost accepted:** the same as 019: counties dominated by government lending fall below the 30-loan threshold more often, and FHA/VA thin equity isn't in the score. The government share stays in the click panel.
+
+## 022 — Backtest design: 2019 inputs, 2023–2025 vs 2017–2019 outcome, Connecticut excluded (2026-10-15)
+- **Chose:**
+  - Score each CFPB county from **2019 inputs** with the same code as the current index.
+  - Outcome = the county's mean 90+ day delinquency rate over 2023-01 to 2025-12 minus its mean over 2017-01 to 2019-12, in percentage points. 2020–2022 are excluded.
+  - Measure with Spearman correlation, quintile means and the share of counties that rose, with 1,000-resample bootstrap CIs. Compare against each single component and median income alone. Check robustness with HMDA 2018 inputs and a 2024–2025 outcome window.
+  - **Exclude the 8 Connecticut planning regions** in CFPB's file, leaving 499 counties.
+  - Run once; commit the results. Never tune weights or benchmarks afterwards.
+- **Over:** a crosswalk from Connecticut's old counties to planning regions; including 2020–2022; a random train/test split.
+- **Why:**
+  - **2020–2022 excluded:** CARES Act forbearance kept missed payments from being reported as delinquent (DECISIONS 012), so those years understate stress.
+  - **Connecticut:** 2019 HMDA and ACS use the old 8 counties, and the planning regions don't nest within them, so a crosswalk would apportion by population for 8 of 507 counties. Alaska's Valdez-Cordova split doesn't affect the set, since CFPB doesn't publish those counties.
+  - **Run once:** a test that can be re-run until it passes isn't a test.
+  - **Single-input baselines:** an index is only worth its complexity if it beats the best of its parts.
+- **Cost accepted:** 499 counties, mostly metropolitan (CFPB's coverage rule, DECISIONS 007), so the result says nothing about rural counties. One outcome window, in a period with its own shocks (rate rises, insurance costs), so a null result doesn't prove the theory wrong, and a positive one doesn't prove it right.
+
+## 023 — Drop O (non-mortgage debt) from the Burden score (2026-10-15)
+- **Chose:** Existing = x_S alone. No non-mortgage debt component.
+- **Over:** the Urban Institute credit card delinquency rate as O; any of its collections measures.
+- **Why:**
+  - **Rounding.** The only 2019-era release (`201911-update`, built on 2018 credit data) rounds rates to 2 decimals. Card delinquency takes just **20 distinct values** across 2,945 counties, mostly 0.02–0.07, so x_O would move in steps of about 25% of its benchmark and rank counties mostly by rounding.
+  - **A structural break.** From 2022 the credit bureaus stopped reporting most medical collections: the median county's share with medical debt in collections fell from 0.19 to 0.04, and with any debt in collections from 0.32 to 0.23. That's a change in reporting, not in stress, and against a fixed 2019 benchmark it would read as improvement. Student loans also changed from "in default" to "delinquent or in default".
+  - Urban still reports Connecticut by its old counties in 2025.
+- **Cost accepted:** **non-mortgage debt enters the score only through D and R**, i.e. through new buyers' debt-to-income ratios and denials. Existing owners' card, auto and student debt isn't measured. Listed as a limitation (SPEC Phase 4).
+
+## 024 — Insurance premiums: HUD crosswalk run once, locally; county tables committed (2026-10-15)
+- **Chose:** convert FIO ZIP premiums to counties with the HUD USPS crosswalk via a HUD API token kept in a git-ignored `.env` on this Mac. Run once per FIO year used, and **commit the county-level premium tables** to `data/processed/`. Use the **Q4 2019** crosswalk for the 2019 premiums (2019 county codes, as in the backtest inputs) and a **recent** crosswalk for 2022 (current county codes, matching the map). The county premium is the residential-address-weighted mean of its ZIPs' premiums, renormalized over the ZIPs FIO publishes, and null below 50% coverage.
+- **Over:** storing the token as a GitHub Actions secret and converting on every refresh; the public Census 2010 ZCTA housing-unit weights; one crosswalk for both years.
+- **Why:** FIO data is a one-off release (2018–2022, nothing newer), so there's nothing for a scheduled job to refresh. Committing the result keeps the token off GitHub and the refresh free of a dependency on a login-gated service. HUD's crosswalk reflects USPS addresses at the time, and using the crosswalk from the same period as the premiums keeps each year's county codes consistent with its other inputs.
+- **Cost accepted:** the county tables can only be rebuilt on a machine with the token. Their provenance (crosswalk year and quarter, retrieval date, input file hash) is recorded in `meta.json` so they can be audited.
+
+## 025 — PTI loan rules and loan term (2026-10-15)
+- **Chose:**
+  - **n = each loan's own `loan_term`** (months), falling back to **360 only when it's `NA` or `Exempt`**; the fallbacks are counted.
+  - **Exclude interest-only, balloon and negative-amortization loans** (flag = `1`; `1111` exempt stays in, as in DECISIONS 013). The amortization formula doesn't describe their payments.
+  - **Keep a loan only if** `0 < interest_rate ≤ 20`, `loan_amount > 0` and `property_value > 0`, `income ≥ 10` ($10,000), and the computed **PTI ≤ 1.0**. Also, the county must have a tax rate and an insurance premium, since T and I need them.
+  - Report the loans removed by each rule, nationally and per county, and **flag counties that lose more than 10%** of their loans.
+  - The amortization unit test includes a 15-year case.
+- **Over:** n = 360 for every loan; validity bounds of `rate > 0` and `income > 0` only; trimming by percentiles.
+- **Why:**
+  - **Loan term.** 15-year loans have much higher payments than a 30-year formula gives (3.6% of qualifying 2019 loans and 2.3% of 2025 loans have a 180-month term), so a fixed 360 would understate PTI where they're common.
+  - **The bounds.** 2019 has interest rates up to 5,625% and incomes of $0 or less, which are reporting errors. An income below $10,000 for a home buyer is almost always a placeholder or a misreported unit, and a payment above 100% of income isn't a real loan.
+  - **Per-rule counts and the flag** keep the rules auditable and show where they bite.
+- **Cost accepted:** the rules are judgment calls. The PTI ≤ 1.0 cap trims the extreme tail, so PTI medians lean very slightly low where such loans cluster. Counties without an insurance premium or tax rate get no PTI, and so a NewBuyer half of only D and R.
+
+## 026 — 2018 robustness inputs: HMDA Snapshot, alongside 2019 One-Year (2026-10-15)
+- **Chose:** the 4b robustness run uses the **2018 Snapshot** HMDA file; the main backtest uses the **2019 One-Year** file.
+- **Over:** dropping the 2018 check; switching 2019 to Snapshot so both match.
+- **Why:** FFIEC publishes no 2018 One-Year file (404 at every path tried; the Data Browser serves 2018 from the Three-Year dataset). One-Year is the more complete view of 2019, and the difference between the two dataset types is resubmitted records only.
+- **Cost accepted:** the two runs differ slightly in dataset type as well as year. Recorded in `meta.json` and in the 4b report.
+
+## 027 — ACS 2015–2019 from the Census prototype table-based files (2026-10-15)
+- **Chose:** read 2019 ACS tables from `summary_file/2019/prototype/5YRData/acsdt5y2019-{table}.dat` with the existing reader.
+- **Over:** parsing the official sequence-based summary files; the Census API (needs a key).
+- **Why:** table-based files exist from 2021 onward only, and 2019 is published in that format only as a "prototype". A **spot-check against the official sequence-based 2019 release** (run 2026-10-15) compared every county in 10 states (AL, AK, CA, CT, DE, DC, FL, NY, TX, VT): **563 counties, all six tables** (B11001, B19013, B25077, B25091, B25103, B25119), **45,040 cells (every estimate and MOE), 0 mismatches**. 99 cells are unavailable in both, each file using its own missing-value code.
+- **Cost accepted:** a check of 10 states, not all 51. The headers are identical to 2024, so a format error elsewhere would also have shown up in these states.
