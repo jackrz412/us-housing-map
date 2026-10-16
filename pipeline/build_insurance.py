@@ -131,20 +131,26 @@ def hud_get(token, params):
             time.sleep(30 * (attempt + 1))  # rate-limited: back off
 
 
+def api_row(item):
+    """(county, zip, res_ratio) from one HUD API result or downloaded-file row.
+    For the county-ZIP type the county is in "county" and the ZIP in "geoid"."""
+    return str(item["county"]).zfill(5), str(item["geoid"]).zfill(5), float(item["res_ratio"])
+
+
 def fetch_crosswalk(token, year, quarter, counties):
     """[(county, zip, res_ratio)] for one HUD quarter, and a hash of the input.
 
     Three routes, cheapest first:
       1. a file downloaded from huduser.gov while logged in, saved as
-         data/raw/COUNTY_ZIP_<MM><YYYY>.xlsx (e.g. COUNTY_ZIP_122019.xlsx);
+         data/raw/COUNTY-ZIP_<MM><YYYY>.xlsx (e.g. COUNTY-ZIP_122019.xlsx), with
+         the same columns as the API;
       2. the API with query=All (one request; HUD supports it from 2021 Q1);
       3. the API one county at a time (older quarters; ~3,200 requests,
          cached per county so an interrupted run resumes).
     """
-    xlsx = RAW_DIR / f"COUNTY_ZIP_{quarter * 3:02d}{year}.xlsx"
+    xlsx = RAW_DIR / f"COUNTY-ZIP_{quarter * 3:02d}{year}.xlsx"
     if xlsx.exists():
-        rows = [(str(r["COUNTY"]).zfill(5), str(r["ZIP"]).zfill(5), float(r["RES_RATIO"]))
-                for r in read_xlsx(xlsx) if r.get("COUNTY")]
+        rows = [api_row(r) for r in read_xlsx(xlsx) if r.get("county")]
         return rows, hashlib.sha256(xlsx.read_bytes()).hexdigest(), xlsx.name
 
     cache = RAW_DIR / f"hud_county_zip_{year}q{quarter}"
@@ -155,9 +161,7 @@ def fetch_crosswalk(token, year, quarter, counties):
         if not path.exists():
             path.write_text(json.dumps(hud_get(token, {"type": HUD_COUNTY_ZIP, "query": "All",
                                                        "year": year, "quarter": quarter})))
-        for item in json.loads(path.read_text())["data"]["results"]:
-            rows.append((str(item["geoid"]).zfill(5), str(item["zip"]).zfill(5),
-                         float(item["res_ratio"])))
+        rows += [api_row(item) for item in json.loads(path.read_text())["data"]["results"]]
     else:
         for i, county in enumerate(sorted(counties), 1):
             path = cache / f"{county}.json"
@@ -167,8 +171,7 @@ def fetch_crosswalk(token, year, quarter, counties):
                 time.sleep(0.5)  # be polite to HUD's API
             if i % 250 == 0:
                 print(f"  {year} Q{quarter}: {i:,} of {len(counties):,} counties")
-            for item in json.loads(path.read_text())["data"]["results"]:
-                rows.append((county, str(item["zip"]).zfill(5), float(item["res_ratio"])))
+            rows += [api_row(item) for item in json.loads(path.read_text())["data"]["results"]]
     digest = hashlib.sha256(json.dumps(sorted(rows)).encode()).hexdigest()
     return rows, digest, f"HUD USPS API type {HUD_COUNTY_ZIP}"
 

@@ -26,5 +26,17 @@ class CountyPremiums(unittest.TestCase):
         self.assertEqual(bi.county_premiums({"01001": 1000.0}, crosswalk)["09003"], (None, 0.3))
 
 
+class ApiRow(unittest.TestCase):
+    def test_county_zip_fields(self):
+        # Shape of a real type-7 result: the ZIP is in "geoid".
+        item = {"county": "01001", "geoid": "36003", "city": "AUTAUGAVILLE", "state": "AL",
+                "res_ratio": 0.0355, "bus_ratio": 0.0185, "oth_ratio": 0.0397, "tot_ratio": 0.0346}
+        self.assertEqual(bi.api_row(item), ("01001", "36003", 0.0355))
+
+    def test_pads_codes(self):
+        self.assertEqual(bi.api_row({"county": 1001, "geoid": 501, "res_ratio": 0}),
+                         ("01001", "00501", 0.0))
+
+
 if __name__ == "__main__":
     unittest.main()
