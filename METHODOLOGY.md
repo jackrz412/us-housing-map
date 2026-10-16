@@ -170,6 +170,49 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
 
 ---
 
+## Stress index (Phase 4)
+
+Two scores, one per trigger of the double trigger model (DECISIONS 020). Every component is divided by a fixed benchmark, so **1.0 = at the benchmark** and 1.2 = 20% above it. Formulas in `pipeline/stress_index.py`; design in SPEC Phase 4.
+
+| Component | Value | Benchmark | Source (current) |
+|---|---|---|---|
+| PTI: new-buyer payment ÷ income, county median of per-loan values | ratio | **0.28** (fixed rule of thumb) | HMDA 2025, ACS 2020–2024, FIO 2022 |
+| D: loans with DTI above 43% | % of loans | **28.52%** (2019 national) | HMDA 2025 |
+| R: applications denied for debt-to-income | % of applications | **4.10%** | HMDA 2025 |
+| S: mortgaged owners paying 30%+ of income | % of mortgaged owners | **27.81%** | ACS 2020–2024 |
+| CLTV: conventional loans above 90% CLTV | % of conventional loans | **36.03%** | HMDA 2025 |
+
+- **Burden** = 0.5 × mean(x_PTI, x_D, x_R) + 0.5 × x_S. NewBuyer averages the components a county has. Burden is null unless both halves are present. O (non-mortgage debt) was dropped (DECISIONS 023).
+- **Equity** = x_CLTV, over conventional loans only (DECISIONS 021).
+- **Benchmarks** are the 2019 national values (50 states + DC) from HMDA 2019 One-Year and ACS 2015–2019, computed once by `build_benchmarks.py` and stored in `benchmarks.json`. They're **never recomputed** from current data, so a score means the same thing in every year (DECISIONS 020).
+
+### PTI, per loan
+- PTI = (M + T + I) ÷ (income × 1000 / 12), with:
+  - M = principal and interest on `loan_amount` at `interest_rate` over the loan's own `loan_term` (360 months when `NA` or `Exempt`);
+  - T = the county effective property tax rate (ACS median taxes ÷ median value) × `property_value` ÷ 12;
+  - I = the county average homeowners premium per policy ÷ 12.
+- **Loan rules** (DECISIONS 025). A loan is counted under the first rule it fails:
+  1. interest-only, balloon or negative-amortization (`1111` exempt stays in);
+  2. rate not in (0, 20];
+  3. loan amount or property value missing or ≤ 0;
+  4. income below $10,000;
+  5. no county tax rate or premium;
+  6. PTI above 1.0.
+- The county value is the **median** over the loans that pass, if at least 30 do. Per-rule counts, nationally and per county, are in `index_pti_rules.json`. Counties where the loan-level rules (1–4 and 6) remove more than 10% of their loans are flagged `pti_rules_over_10pct` in `meta.json`.
+- **Nuances:**
+  - **Small-lender exemptions drive the >10% flag.** Lenders under the 2018 EGRRCPA partial exemption report `Exempt` for the rate, so their loans can't get a PTI. Nationally that's 2.3% of loans, but it's concentrated: in about 550 counties, exempt-rate loans alone are over 10% of loans. In those counties, PTI describes loans from larger lenders.
+  - **Insurance (DECISIONS 024).** I is FIO's average premium per policy (HO-3/HO-5 owner policies from the largest insurers, excluding residual markets such as Florida's Citizens and excess & surplus lines). It's converted to counties with HUD's county-to-ZIP crosswalk, weighted by residential addresses, and is null below 50% address coverage. **The current score pairs 2025 loans with 2022 premiums, unadjusted**: FIO has no later data, and premiums rose faster than inflation in 2018–2022, so I is likely understated.
+  - **Binned inputs:** loan amount and property value are $10,000-bin midpoints.
+  - **Tax rate:** taxes are top-coded at $10,000, so T is a lower bound in the top-coded counties.
+  - **Timing:** PTI and D describe this year's buyers. S describes all mortgaged owners in a 5-year window.
+
+### Limitations
+- **Non-mortgage debt enters only through D and R**, i.e. through new buyers' debt-to-income. Existing owners' card, auto and student debt isn't in the score (DECISIONS 023).
+- The weights are a stated choice, not an estimate. The 4b backtest tests them once and they aren't tuned afterwards.
+- A score of 1.0 means "at the 2019 national level", not "safe".
+
+---
+
 ## Change log
 | Date | PR | Change |
 |---|---|---|
@@ -180,3 +223,4 @@ ACS figures are survey estimates with 90% margins of error. For derived values (
 | 2026-10-12 | 3 | Weekly refresh: layers update when their source changes; new data years are switched by hand (DECISIONS 018). |
 | 2026-10-12 | 2f | Delinquency legend ends renamed "Better than baseline" / "Worse than baseline"; click-panel and table labels name what each value is a share of; fainter "Data not available" hatch on the delinquency layer. |
 | 2026-10-12 | 2g | High-CLTV layer limited to conventional loans; breaks 40–80% → 20, 30, 40, 50%; government-backed loan share added to the click panel (DECISIONS 019). |
+| 2026-10-16 | 4a | Stress index: Burden and Equity scores, fixed 2019 benchmarks, PTI loan rules (DECISIONS 020–025). |
