@@ -90,6 +90,33 @@ class Statistics(unittest.TestCase):
         self.assertGreater(a[1], stat(rows))
 
 
+class PartialSpearman(unittest.TestCase):
+    def test_residuals(self):
+        # y = 2x + 1 exactly: residuals are zero.
+        self.assertEqual(bt.ols_residuals([3, 5, 7], [1, 2, 3]), [0.0, 0.0, 0.0])
+
+    def test_matches_first_order_formula(self):
+        # Residual correlation equals (r_xy - r_xz r_yz) / sqrt((1 - r_xz^2)(1 - r_yz^2))
+        # on the ranks.
+        rng = random.Random(3)
+        z = [rng.random() for _ in range(80)]
+        x = [zi + rng.gauss(0, 0.5) for zi in z]
+        y = [zi + xi + rng.gauss(0, 0.5) for zi, xi in zip(z, x)]
+        rx, ry, rz = bt.ranks(x), bt.ranks(y), bt.ranks(z)
+        rxy, rxz, ryz = bt.pearson(rx, ry), bt.pearson(rx, rz), bt.pearson(ry, rz)
+        expected = (rxy - rxz * ryz) / ((1 - rxz ** 2) * (1 - ryz ** 2)) ** 0.5
+        self.assertAlmostEqual(bt.partial_spearman(x, y, z), expected)
+
+    def test_removes_shared_baseline(self):
+        # x and y both just track z: raw rho is high, partial rho is near 0.
+        rng = random.Random(5)
+        z = list(range(300))
+        x = [zi + rng.gauss(0, 30) for zi in z]
+        y = [zi + rng.gauss(0, 30) for zi in z]
+        self.assertGreater(bt.spearman(x, y), 0.8)
+        self.assertLess(abs(bt.partial_spearman(x, y, z)), 0.15)
+
+
 class Evaluate(unittest.TestCase):
     def test_orientation_and_paired_comparison(self):
         counties = [f"{i:05d}" for i in range(50)]

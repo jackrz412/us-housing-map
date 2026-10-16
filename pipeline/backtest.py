@@ -147,6 +147,23 @@ def spearman(xs, ys):
     return pearson(ranks(xs), ranks(ys))
 
 
+def ols_residuals(ys, xs):
+    """Residuals of ys regressed on xs (OLS with an intercept)."""
+    n = len(xs)
+    mx, my = sum(xs) / n, sum(ys) / n
+    sxx = sum((x - mx) ** 2 for x in xs)
+    slope = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / sxx if sxx else 0.0
+    return [y - (my + slope * (x - mx)) for x, y in zip(xs, ys)]
+
+
+def partial_spearman(xs, ys, zs):
+    """Spearman partial correlation of xs and ys controlling for zs
+    (DECISIONS 029): rank all three, regress the x and y ranks each on the z
+    ranks, correlate the residuals."""
+    rz = ranks(zs)
+    return pearson(ols_residuals(ranks(xs), rz), ols_residuals(ranks(ys), rz))
+
+
 def quintiles(pairs):
     """Outcome by quintile of the measure.
 
