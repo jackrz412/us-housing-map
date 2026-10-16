@@ -303,6 +303,7 @@ def main():
                          **evaluate(vintages[vintage]["measures"], outcomes[window])}
 
     cfpb = json.loads(CFPB_SOURCE.read_text())
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
     write_json(OUT_DIR / "results.json", {
         "run_date": date.today().isoformat(),
         "counties": len(counties),
