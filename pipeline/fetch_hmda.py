@@ -31,7 +31,10 @@ VINTAGES = {
            "csv": "2019_public_lar_one_year.csv"},
     2018: {"dataset": "snapshot",
            "url": f"{STATIC}/snapshot/2018/2018_public_lar_csv.zip",
-           "csv": "2018_public_lar_csv.csv"},
+           "csv": "2018_public_lar_csv.csv",
+           # The 2018 Snapshot header names CLTV "loan_to_value_ratio"; it's the
+           # same reported field (DATA_SOURCES.md, Phase 4b note).
+           "renames": {"loan_to_value_ratio": "combined_loan_to_value_ratio"}},
 }
 
 # The year the Phase 2 layers use.

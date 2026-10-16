@@ -48,7 +48,7 @@ from datetime import date
 import acs
 import stress_index as si
 from fetch_cfpb import RAW_PATH as CFPB_PATH, SOURCE_PATH as CFPB_SOURCE
-from fetch_hmda import dataset_label, files
+from fetch_hmda import VINTAGES, dataset_label, files
 from geo import PROCESSED_DIR, ROOT
 from output import write_json
 
@@ -257,7 +257,8 @@ def score(hmda_year, fio_year, counties, benchmarks):
     """compute() on one vintage, over the backtest counties."""
     _, _, _, csv_path, _ = files(hmda_year)
     premium = json.loads((PROCESSED_DIR / f"fio_premium_{fio_year}.json").read_text())
-    burden, equity, report = si.compute(csv_path, ACS_YEAR, premium, benchmarks, counties)
+    burden, equity, report = si.compute(csv_path, ACS_YEAR, premium, benchmarks, counties,
+                                        renames=VINTAGES[hmda_year].get("renames"))
     return burden, equity, report
 
 

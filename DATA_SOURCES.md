@@ -141,6 +141,7 @@ Run 2026-10-14/15 for the index and backtest in SPEC Phase 4. Samples only; no p
   - Unzips to `2019_public_lar_one_year.csv`, 6,837,866,739 bytes, 99 columns (same column set as 2025).
   - The Snapshot 2019 file also exists (`snapshot/2019/2019_public_lar_csv.zip`, 980 MB). One-Year includes resubmissions, so it's the better "final" view of 2019. Record `"dataset": "One-Year 2019"` in `meta.json`.
 - **2018 (for the 4b robustness check):** there is **no One-Year file** at `one-year/2018/…` (404 for every name tried). The Data Browser serves 2018 from the Three-Year dataset. The **Snapshot** exists: `snapshot/2018/2018_public_lar_csv.zip` (823,719,647 bytes, `Last-Modified: 2025-11-21`). Using it means the 2018 run is Snapshot while 2019 is One-Year; the difference is resubmitted records only.
+- **2018 header (Phase 4b note):** the 2018 Snapshot names CLTV `loan_to_value_ratio`; every other field the index uses has the 2019 name. It's the same reported field (Reg C collects only combined LTV): among conventional home-purchase loans, 34.0% are over 90 with a median of 82.6 in 2018, against 35.8% and 85.0 in 2019. `fetch_hmda.VINTAGES` renames it for 2018.
 - **Fields checked** (2019 vs 2025, Phase 2a loan filters, home purchase): `income`, `property_value`, `loan_amount`, `interest_rate`, `loan_type`, `debt_to_income_ratio`, `combined_loan_to_value_ratio`, `denial_reason_1`–`_4`, `county_code`. All present, same names, same codes.
 
 | Field | 2019 | 2025 | Note for 4a |

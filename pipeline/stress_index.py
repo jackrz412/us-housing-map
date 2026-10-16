@@ -322,7 +322,18 @@ def rule_report(counties, national, shapes):
             "flagged_over_10pct": flagged}
 
 
-def compute(csv_path, acs_year, premium, benchmarks, shapes):
+def source_sql(csv_path, renames=None):
+    """The HMDA file as a relation, with any per-vintage column renames applied
+    (fetch_hmda.VINTAGES, e.g. 2018's loan_to_value_ratio), so one query reads
+    every vintage."""
+    src = f"read_csv('{csv_path}', header = true, all_varchar = true)"
+    if renames:
+        cols = ", ".join(f"{old} AS {new}" for old, new in renames.items())
+        src = f"(SELECT * RENAME ({cols}) FROM {src})"
+    return src
+
+
+def compute(csv_path, acs_year, premium, benchmarks, shapes, renames=None):
     """Every component and both scores for one vintage.
 
     Returns (burden, equity, report): burden and equity are {fips: row} over
@@ -332,7 +343,7 @@ def compute(csv_path, acs_year, premium, benchmarks, shapes):
     s, tau, s_national = acs_inputs(acs_year)
     con = connect()
     load_county_inputs(con, tau, premium)
-    counties, national = hmda_aggregates(con, f"read_csv('{csv_path}', header = true, all_varchar = true)")
+    counties, national = hmda_aggregates(con, source_sql(csv_path, renames))
 
     burden, equity = {}, {}
     for fips in sorted(shapes):
