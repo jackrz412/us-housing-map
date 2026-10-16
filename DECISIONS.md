@@ -205,3 +205,15 @@ Each entry: the decision, the alternatives, and why. Newest at the bottom.
 - **Over:** evaluating all measures on one common sample (it would drop counties from every measure to match the sparsest); comparing Burden only against the best-looking input (choosing the comparison after seeing the results).
 - **Why:** SPEC Phase 4 fixed the metrics but not these details, and each one could be bent after seeing the results. Committing them with the code, before the 2019 county scores exist, keeps the test honest.
 - **Cost accepted:** measures with different n aren't on exactly the same counties; the paired comparisons are the like-for-like test.
+
+## 029 — One pre-specified secondary backtest outcome: the 2023–2025 level, controlling for the 2017–2019 level (2026-10-16)
+- **Chose** (the owner's specification, logged before any of it is computed):
+  - **Outcome:** each county's mean 90+ day delinquency **level**, 2023-01 to 2025-12 (a level, not a change).
+  - **Test:** Spearman **partial** correlation between the 2019 Burden score and that level, controlling for the county's 2017-01 to 2019-12 mean level. Rank all three variables (ties averaged), regress the outcome ranks and the Burden ranks each on the baseline ranks (OLS with an intercept), and correlate the two sets of residuals.
+  - **CI:** 95% percentile bootstrap, 1,000 resamples of counties, seed 20261016 (as in DECISIONS 028); each resample is re-ranked.
+  - **Baselines:** the same test for each single component (PTI, D, R, S, CLTV; Equity = x_CLTV ranks identically to CLTV) and for median income, entered as −income ("lower income") so a positive value means the expected direction, as in DECISIONS 028.
+  - **Same 499 counties and the same 2019 scores** (`reports/backtest/county_scores.json`, from the primary run). No other changes.
+  - **Reported whatever its sign.** The primary change-score result stays the headline of BACKTEST.md; this one is labelled a pre-specified secondary analysis added after the primary result.
+- **Over:** a second change score; adding further secondary outcomes or robustness runs for it.
+- **Why:** the primary outcome turned out to be dominated by regression to the mean: delinquency fell in 92% of counties and the change tracks the 2017–2019 level (ρ = −0.77), so any measure correlated with that level gets a negative ρ. Controlling for the baseline asks whether Burden ranks counties' later levels beyond what their earlier levels already explain.
+- **Cost accepted:** it was chosen after the primary result was seen. Fixing exactly one test, in writing, before computing it limits but doesn't remove that; the report says so.
