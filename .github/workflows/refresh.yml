@@ -17,6 +17,7 @@ on:
   pull_request:
     paths:
       - "pipeline/**"
+      - "tests/**"
       - "requirements.txt"
       - ".github/workflows/refresh.yml"
 
@@ -49,6 +50,10 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      # Known-answer tests for the stress index formulas (SPEC Phase 4a).
+      - name: Unit tests
+        run: python -m unittest discover tests
 
       - name: Refresh changed sources
         run: |

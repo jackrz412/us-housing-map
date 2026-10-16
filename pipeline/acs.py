@@ -28,14 +28,15 @@ def parse(raw):
     return int(v) if v.is_integer() and "." not in raw else v
 
 
-def read_table(table, geo_ids=None):
+def read_table(table, geo_ids=None, year=ACS_YEAR):
     """Return {fips: {column: value}} for county rows.
 
     If geo_ids is given, return {geo_id: {column: value}} for exactly those
-    GEO_IDs instead (e.g. the national row).
+    GEO_IDs instead (e.g. the national row). `year` is the 5-year vintage's
+    end year (2024 = 2020-2024).
     """
     out = {}
-    with raw_path(table).open() as f:
+    with raw_path(table, year).open() as f:
         header = f.readline().rstrip("\n").split("|")
         for line in f:
             parts = line.rstrip("\n").split("|")
@@ -51,17 +52,17 @@ def read_table(table, geo_ids=None):
     return out
 
 
-def source_info(table):
+def source_info(table, year=ACS_YEAR):
     """Provenance recorded by fetch_acs.py, for meta.json."""
-    return json.loads(raw_path(table).with_suffix(".source.json").read_text())
+    return json.loads(raw_path(table, year).with_suffix(".source.json").read_text())
 
 
-def period():
-    return f"{ACS_YEAR - 4}–{ACS_YEAR}"
+def period(year=ACS_YEAR):
+    return f"{year - 4}–{year}"
 
 
-def legend_period():
-    return f"ACS {ACS_YEAR - 4}–{ACS_YEAR} 5-year"
+def legend_period(year=ACS_YEAR):
+    return f"ACS {year - 4}–{year} 5-year"
 
 
 # --- Margins of error ---------------------------------------------------------

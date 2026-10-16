@@ -120,6 +120,90 @@ def validate_layer(name, rules, shapes, meta, r):
                 sample(stray))
 
 
+# --- Stress index (Phase 4) ---------------------------------------------------------
+# burden.json and equity.json hold an object per county, not a single number.
+# Bounds from SPEC Phase 4: county PTI 0.05-1.5, scores 0.2-5. Floors sit ~10%
+# under the current counts (burden ~2,860, PTI ~2,650, equity = the CLTV layer).
+INDEX_LAYERS = {
+    "burden": {
+        "fields": ["pti", "d", "r", "s", "x_pti", "x_d", "x_r", "x_s",
+                   "new_buyer", "existing", "burden", "n_components"],
+        "score": "burden", "min_counties": 2500,
+        "component_floors": {"pti": 2300, "d": HMDA_FLOOR, "r": HMDA_FLOOR, "s": 3000},
+        "bounds": {"pti": (0.05, 1.5), "burden": (0.2, 5)},
+    },
+    "equity": {
+        "fields": ["cltv", "x_cltv", "equity"],
+        "score": "equity", "min_counties": HMDA_CONV_FLOOR,
+        "component_floors": {"cltv": HMDA_CONV_FLOOR},
+        # Reported, not failed: a handful of counties have almost no high-CLTV
+        # conventional loans (0.6-7%), which is real, and puts x_CLTV below 0.2.
+        # Owner to decide whether the 0.2 floor should apply to Equity.
+        "warn_bounds": {"equity": (0.2, 5)},
+    },
+}
+MIN_COMPONENTS = 3
+
+
+def validate_index(name, rules, shapes, meta, r):
+    print(f"\n[{name}]")
+    path = PROCESSED_DIR / f"{name}.json"
+    if not path.exists():
+        r.check(False, f"{path.name} exists")
+        return
+    data = json.loads(path.read_text())
+    no_shape = set(data) - set(shapes)
+    r.check(not no_shape, "every data FIPS has a map shape (anti-join)", sample(no_shape))
+    r.check(set(shapes) <= set(data), "every map county has a row", sample(set(shapes) - set(data)))
+    bad_rows = [f for f, row in data.items()
+                if not isinstance(row, dict) or set(row) != set(rules["fields"])]
+    r.check(not bad_rows, f"rows have exactly the fields {rules['fields']}", sample(bad_rows))
+    if bad_rows:
+        return
+
+    scored = [f for f, row in data.items() if row[rules["score"]] is not None]
+    r.check(len(scored) >= rules["min_counties"],
+            f"{len(scored):,} counties with a {rules['score']} score (floor {rules['min_counties']:,})")
+    for field, floor in rules["component_floors"].items():
+        n = sum(row[field] is not None for row in data.values())
+        r.check(n >= floor, f"{n:,} counties with {field} (floor {floor:,})")
+
+    def out_of(field, lo, hi):
+        return [f"{f}={row[field]}" for f, row in data.items()
+                if row[field] is not None and not lo <= row[field] <= hi]
+
+    for field, (lo, hi) in rules.get("bounds", {}).items():
+        bad = out_of(field, lo, hi)
+        r.check(not bad, f"{field} within {lo}–{hi}", sample(bad))
+    for field, (lo, hi) in rules.get("warn_bounds", {}).items():
+        bad = out_of(field, lo, hi)
+        if bad:
+            r.info(f"WARNING {len(bad)} counties with {field} outside {lo}–{hi}: {sample(bad)}")
+
+    if "n_components" in rules["fields"]:
+        thin = [f for f in scored if data[f]["n_components"] < MIN_COMPONENTS]
+        if thin:
+            r.info(f"WARNING {len(thin)} counties' {rules['score']} rests on fewer than "
+                   f"{MIN_COMPONENTS} components: {sample(thin)}")
+
+    entry = meta.get(name, {})
+    missing = [f for f in META_FIELDS if not entry.get(f)]
+    r.check(not missing, "meta.json entry complete", f"missing {missing}")
+
+
+def validate_benchmarks(r):
+    print("\n[benchmarks]")
+    path = PROCESSED_DIR / "benchmarks.json"
+    if not path.exists():
+        r.check(False, "benchmarks.json exists")
+        return
+    b = json.loads(path.read_text())
+    r.check(set(b) == {"pti", "d", "r", "s", "cltv"}, "one benchmark per component", str(sorted(b)))
+    r.check(b.get("pti") == 0.28, "b_PTI = 0.28 (fixed)", str(b.get("pti")))
+    r.check(all(isinstance(v, (int, float)) and 0 < v < 100 for v in b.values()),
+            "benchmarks are positive percentages or ratios", str(b))
+
+
 def main():
     shapes = map_counties()
     print(f"map universe: {len(shapes):,} counties (50 states + DC)")
@@ -129,6 +213,9 @@ def main():
     r = Report()
     for name, rules in LAYERS.items():
         validate_layer(name, rules, shapes, meta, r)
+    validate_benchmarks(r)
+    for name, rules in INDEX_LAYERS.items():
+        validate_index(name, rules, shapes, meta, r)
 
     print(f"\n{'FAILED' if r.failures else 'OK'}: {r.failures} failure(s)")
     sys.exit(1 if r.failures else 0)

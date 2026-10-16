@@ -69,6 +69,10 @@ CLEANS = {
     "clean_permits.py": ["acs", "bps"],
     "clean_hmda.py": ["hmda"],
     "clean_delinquency.py": ["cfpb"],
+    # The stress index (Phase 4a) reads HMDA and ACS, plus two committed
+    # inputs that the refresh never rebuilds: the fixed 2019 benchmarks and
+    # the FIO county premiums (DECISIONS 020, 024).
+    "clean_index.py": ["hmda", "acs"],
 }
 
 # Next-vintage probes: if one of these exists, a newer data year is out.

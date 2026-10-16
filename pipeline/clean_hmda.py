@@ -19,6 +19,8 @@ import duckdb
 
 from fetch_hmda import CSV_PATH, DATASET, HMDA_YEAR, SOURCE_PATH
 from geo import RAW_DIR, map_counties
+from hmda_codes import (CLTV_THRESHOLD, CONVENTIONAL, FILTERS, GOVERNMENT,
+                        dti_over_43_sql, sql_list)
 from output import update_meta, write_layer
 
 # Why DuckDB and not pandas: the CSV is ~5 GB with 99 columns and ~11M rows.
@@ -34,44 +36,10 @@ from output import update_meta, write_layer
 # The memory_limit is a ceiling, not an allocation: this query uses far less.
 MEMORY_LIMIT = "8GB"
 
-# Loan-level filters (SPEC: HMDA layers). All codes are from the HMDA
-# Filing Instructions Guide. Columns are read as text (all_varchar), so
-# codes are compared as strings.
-FILTERS = """
-    action_taken = '1'          -- loan originated
-    AND loan_purpose = '1'      -- home purchase
-    AND lien_status = '1'       -- first lien
-    AND occupancy_type = '1'    -- principal residence
-    -- Exclude open-end lines of credit and reverse mortgages ('1').
-    -- '1111' means the lender is exempt from reporting the flag, not that
-    -- the loan is open-end or reverse, so those loans stay in.
-    AND open_end_line_of_credit IS DISTINCT FROM '1'
-    AND reverse_mortgage IS DISTINCT FROM '1'
-"""
-
-# debt_to_income_ratio is reported in bins below 36% and above 49%, and as
-# whole-number strings from 36 to 49 in between. "Above 43%" is therefore the
-# strings 44-49 plus the two top bins. '43' itself is not above 43.
-DTI_OVER_43 = ["44", "45", "46", "47", "48", "49", "50%-60%", ">60%"]
-
-# Every value debt_to_income_ratio can take other than 'NA' and 'Exempt'.
-# Listing them makes an unexpected new code count as invalid, not silently as
-# "not over 43".
-DTI_VALID = ["<20%", "20%-<30%", "30%-<36%"] + [str(i) for i in range(36, 50)] + ["50%-60%", ">60%"]
-
-CLTV_THRESHOLD = 90  # percent
-
-# loan_type: 1 conventional, 2 FHA, 3 VA, 4 USDA/RHS. The CLTV layer counts
-# conventional loans only (DECISIONS 019): FHA, VA and USDA loans are above
-# 90% CLTV by program design (3.5% or zero down), so including them made the
-# layer mostly a map of government lending. The government share is output
-# separately so that side isn't hidden.
-CONVENTIONAL = "1"
-GOVERNMENT = ["2", "3", "4"]
-
-
-def sql_list(values):
-    return ", ".join(f"'{v}'" for v in values)
+# Loan filters, DTI codes and loan types live in hmda_codes.py, shared with
+# the stress index (Phase 4) so both use the same definitions. The CLTV layer
+# counts conventional loans only (DECISIONS 019); the government share is
+# output separately so that side isn't hidden.
 
 
 # One pass over the file computes every metric per county. Each metric uses
@@ -88,8 +56,7 @@ WITH loans AS (
         CASE WHEN loan_type IN ('{CONVENTIONAL}', {sql_list(GOVERNMENT)})
              THEN loan_type IN ({sql_list(GOVERNMENT)}) END AS is_govt,
         loan_type = '{CONVENTIONAL}' AS is_conv,
-        CASE WHEN debt_to_income_ratio IN ({sql_list(DTI_VALID)})
-             THEN debt_to_income_ratio IN ({sql_list(DTI_OVER_43)}) END AS dti_over_43
+        {dti_over_43_sql()} AS dti_over_43
     FROM read_csv(?, header = true, all_varchar = true)
     WHERE {FILTERS}
 )
