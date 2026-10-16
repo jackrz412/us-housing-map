@@ -8,6 +8,8 @@ Run once on 2026-10-16 (`pipeline/backtest.py`). The design is in SPEC.md Phase 
 
 The most likely reason is the outcome, not the index. Delinquency fell in 92% of these counties between 2017–2019 and 2023–2025. How far a county fell depends mostly on where it started: counties with high 2017–2019 rates fell the most. Burden is higher where 2017–2019 delinquency was higher, so it inherits that pattern. The test, as designed, can't tell "the index doesn't work" apart from "the outcome mostly measures how far each county had to fall". See [What the evidence does and doesn't support](#what-the-evidence-does-and-doesnt-support).
 
+A single **pre-specified secondary analysis**, added after the primary result because of that diagnosis, ranks each county's 2023–2025 delinquency *level* while controlling for its 2017–2019 level. **Burden comes out at essentially zero there** (partial ρ = +0.006, CI −0.083 to +0.091). Three of its inputs, D, R and CLTV, point the expected way, but PTI and S point the other way and cancel them out. Lower income alone does better (+0.27). See [Secondary analysis](#secondary-analysis-pre-specified-added-after-the-primary-result).
+
 ## Setup
 
 | | |
@@ -77,22 +79,44 @@ All three runs agree, and the component patterns match too (`results.json`, `run
 
 So most of the variation in the outcome is counties falling back from their 2017–2019 levels. Any measure that tracks the baseline level picks up a negative ρ, which fits income and S showing the most negative ρ.
 
+## Secondary analysis (pre-specified, added after the primary result)
+
+*Added after the primary result was seen, because of the regression-to-the-mean diagnosis above. It was specified by the owner and logged as DECISIONS 029 (`3307681`) before any code computed it. It's the only secondary analysis, it's reported whatever its sign, and it doesn't replace the headline.* Output: `reports/backtest/secondary.json` (`pipeline/backtest_secondary.py`).
+
+- **Outcome:** each county's mean 90+ day delinquency level, 2023-01 to 2025-12.
+- **Test:** Spearman partial correlation with the 2019 measure, controlling for the 2017–2019 mean level. All three variables are ranked; the outcome ranks and the measure ranks are each regressed on the baseline ranks, and the residuals are correlated. It asks: among counties that started at the same delinquency level, did higher-scoring ones end up higher?
+- 95% percentile bootstrap, 1,000 resamples, seed 20261016. Same 499 counties, same 2019 scores as the primary run. Positive = the expected direction.
+
+| Measure | n | partial ρ | 95% CI |
+|---|---|---|---|
+| **Burden score** | 499 | **+0.006** | −0.083 to +0.091 |
+| PTI | 493 | −0.115 | −0.204 to −0.028 |
+| D: DTI over 43% | 499 | +0.133 | +0.047 to +0.223 |
+| R: denied for DTI | 499 | +0.228 | +0.143 to +0.307 |
+| S: owners at 30%+ cost burden | 499 | −0.143 | −0.228 to −0.050 |
+| CLTV over 90% (= Equity score) | 499 | +0.336 | +0.251 to +0.418 |
+| Baseline: lower median income | 499 | +0.266 | +0.178 to +0.350 |
+
+**Reading it:**
+- **Burden has no detectable signal** beyond the baseline level. Its CI is centred on zero.
+- Once the baseline is controlled for, **the negative pull disappears for D, R and CLTV**, which all point the expected way. CLTV, and so the Equity score, is the strongest at +0.34.
+- **PTI and S point the opposite way.** Burden averages them with D and R, and they cancel out.
+- **Lower income alone (+0.27) beats Burden** and every Burden input. D, R and CLTV may partly be standing in for income here; this test can't separate them.
+- Per SPEC, none of this changes the weights or benchmarks. Seeing which components "worked" and re-weighting toward them would be tuning on the test.
+
 ## What the evidence does and doesn't support
 
 **Supports:**
 - With this outcome definition, a higher 2019 Burden score went with a *larger fall* in 90+ day delinquency by 2023–2025 across 499 mostly metropolitan counties. The result is stable across input years and outcome windows.
 - PTI is the only input with a positive point estimate, and its CI includes zero.
+- In the secondary analysis, among counties starting from similar 2017–2019 levels, Burden shows **no** relationship with the 2023–2025 level. D, R, CLTV (Equity) and lower income do show the expected relationship.
 
 **Doesn't support:**
-- **That the index works.** Nothing here shows the scores anticipated stress.
+- **That the index works.** Neither test shows the Burden score anticipated stress. The secondary result for Equity is suggestive only: it was chosen after the primary result, and lower income alone does nearly as well.
 - **That the index doesn't work.** In a period when delinquency fell almost everywhere, the planned outcome is dominated by regression to the mean, so it may not be able to show a signal the index has. A null or negative result under these conditions doesn't refute the theory (DECISIONS 022 anticipated this).
 - Anything about rural counties: CFPB covers 499 mostly metropolitan counties.
 - Changing weights or benchmarks. Per SPEC, they are never tuned on these results.
 
-## Decision for the owner
+## Decision (2026-10-16)
 
-Per SPEC, any change after seeing results is the owner's call and gets logged in DECISIONS. The options:
-
-1. **Accept the result as is.** Publish it in 4d as a negative or inconclusive backtest, with the regression-to-the-mean explanation, and proceed to 4c. The map would then present the index as a description of current conditions, not a forecast.
-2. **Add a secondary outcome that accounts for the baseline**, labelled as post hoc in every place it appears. Candidates: the change controlling for the 2017–2019 level (partial rank correlation), or the 2023–2025 level ranked within baseline-level bands. To keep this honest, choose **one** and log it in DECISIONS *before* it's computed. The planned result above stays the headline.
-3. **Pause 4c** until a different validation design is agreed, for example one using a different stress outcome.
+The owner chose to run one pre-specified secondary analysis (above; DECISIONS 029), then to proceed to 4c with **the index presented as a description of current conditions, not a forecast** (DECISIONS 030).

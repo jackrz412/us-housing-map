@@ -209,7 +209,7 @@ Two scores, one per trigger of the double trigger model (DECISIONS 020). Every c
 ### Limitations
 - **Non-mortgage debt enters only through D and R**, i.e. through new buyers' debt-to-income. Existing owners' card, auto and student debt isn't in the score (DECISIONS 023).
 - The weights are a stated choice, not an estimate. The 4b backtest tests them once and they aren't tuned afterwards.
-- **Backtest (4b, `BACKTEST.md`):** on 2019 inputs, higher Burden went with a *larger fall* in 90+ day delinquency by 2023–2025 (ρ = −0.16), most likely because the outcome is dominated by regression to the mean. The index is not shown to anticipate delinquency.
+- **Backtest (4b, `BACKTEST.md`):** on 2019 inputs, higher Burden went with a *larger fall* in 90+ day delinquency by 2023–2025 (ρ = −0.16), most likely because the outcome is dominated by regression to the mean. A pre-specified secondary test controlling for the 2017–2019 level finds no Burden signal (partial ρ = +0.006). The index is presented as a description of current conditions, not a forecast (DECISIONS 030).
 - A score of 1.0 means "at the 2019 national level", not "safe".
 
 ---
