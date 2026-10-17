@@ -252,5 +252,18 @@ class NationalScope(unittest.TestCase):
         self.assertNotIn("72001", counties)
 
 
+
+class SourceSql(unittest.TestCase):
+    def test_renames_a_column(self):
+        import tempfile
+        with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False) as f:
+            f.write("loan_to_value_ratio,income\n95,80\n")
+        con = duckdb.connect()
+        src = si.source_sql(f.name, {"loan_to_value_ratio": "combined_loan_to_value_ratio"})
+        self.assertEqual(con.execute(f"SELECT combined_loan_to_value_ratio, income FROM {src}")
+                         .fetchall(), [("95", "80")])
+        self.assertEqual(si.source_sql(f.name), f"read_csv('{f.name}', header = true, all_varchar = true)")
+
+
 if __name__ == "__main__":
     unittest.main()

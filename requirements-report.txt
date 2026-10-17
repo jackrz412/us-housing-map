@@ -1,0 +1,4 @@
+# For the one-off Phase 4b report charts (pipeline/backtest_charts.py); not
+# needed by the scheduled refresh.
+-r requirements.txt
+matplotlib==3.9.4

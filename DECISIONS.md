@@ -193,3 +193,33 @@ Each entry: the decision, the alternatives, and why. Newest at the bottom.
 - **Over:** parsing the official sequence-based summary files; the Census API (needs a key).
 - **Why:** table-based files exist from 2021 onward only, and 2019 is published in that format only as a "prototype". A **spot-check against the official sequence-based 2019 release** (run 2026-10-15) compared every county in 10 states (AL, AK, CA, CT, DE, DC, FL, NY, TX, VT): **563 counties, all six tables** (B11001, B19013, B25077, B25091, B25103, B25119), **45,040 cells (every estimate and MOE), 0 mismatches**. 99 cells are unavailable in both, each file using its own missing-value code.
 - **Cost accepted:** a check of 10 states, not all 51. The headers are identical to 2024, so a format error elsewhere would also have shown up in these states.
+
+## 028 — Backtest analysis choices, fixed before the run (2026-10-16)
+- **Chose:**
+  - Every measure is oriented so a **positive rho means "higher stress, bigger rise"**; median income enters as −income ("lower income").
+  - Each measure is evaluated on **the counties that have it**; each Burden-vs-input comparison on the counties that have both.
+  - **"Does Burden beat its best single input?"** is answered with a **paired bootstrap CI of rho(Burden) − rho(component) for every Burden input** (PTI, D, R, S), not just for whichever looks best afterwards. Burden "beats" an input only if that CI is above 0.
+  - Quintiles by rank of the measure, ties broken by FIPS; the first n mod 5 quintiles get one extra county. "Rose" = outcome > 0. Q5−Q1 = top-quintile mean change minus bottom, with its own bootstrap CI.
+  - Percentile bootstrap, 1,000 resamples of counties, seed 20261016; one random stream in a fixed order.
+  - Robustness: HMDA 2018 runs with the **2018 FIO premiums** (Q4 2018 crosswalk) and the same ACS 2015–2019.
+- **Over:** evaluating all measures on one common sample (it would drop counties from every measure to match the sparsest); comparing Burden only against the best-looking input (choosing the comparison after seeing the results).
+- **Why:** SPEC Phase 4 fixed the metrics but not these details, and each one could be bent after seeing the results. Committing them with the code, before the 2019 county scores exist, keeps the test honest.
+- **Cost accepted:** measures with different n aren't on exactly the same counties; the paired comparisons are the like-for-like test.
+
+## 029 — One pre-specified secondary backtest outcome: the 2023–2025 level, controlling for the 2017–2019 level (2026-10-16)
+- **Chose** (the owner's specification, logged before any of it is computed):
+  - **Outcome:** each county's mean 90+ day delinquency **level**, 2023-01 to 2025-12 (a level, not a change).
+  - **Test:** Spearman **partial** correlation between the 2019 Burden score and that level, controlling for the county's 2017-01 to 2019-12 mean level. Rank all three variables (ties averaged), regress the outcome ranks and the Burden ranks each on the baseline ranks (OLS with an intercept), and correlate the two sets of residuals.
+  - **CI:** 95% percentile bootstrap, 1,000 resamples of counties, seed 20261016 (as in DECISIONS 028); each resample is re-ranked.
+  - **Baselines:** the same test for each single component (PTI, D, R, S, CLTV; Equity = x_CLTV ranks identically to CLTV) and for median income, entered as −income ("lower income") so a positive value means the expected direction, as in DECISIONS 028.
+  - **Same 499 counties and the same 2019 scores** (`reports/backtest/county_scores.json`, from the primary run). No other changes.
+  - **Reported whatever its sign.** The primary change-score result stays the headline of BACKTEST.md; this one is labelled a pre-specified secondary analysis added after the primary result.
+- **Over:** a second change score; adding further secondary outcomes or robustness runs for it.
+- **Why:** the primary outcome turned out to be dominated by regression to the mean: delinquency fell in 92% of counties and the change tracks the 2017–2019 level (ρ = −0.77), so any measure correlated with that level gets a negative ρ. Controlling for the baseline asks whether Burden ranks counties' later levels beyond what their earlier levels already explain.
+- **Cost accepted:** it was chosen after the primary result was seen. Fixing exactly one test, in writing, before computing it limits but doesn't remove that; the report says so.
+
+## 030 — Present the index as a description of current conditions, not a forecast (2026-10-16)
+- **Chose:** proceed to 4c. Every page that shows the index describes where housing costs, borrowing and thin equity are **loaded now**, relative to fixed 2019 benchmarks. No copy says or implies that it predicts defaults, delinquency or foreclosures. The methodology page explains the backtest, the regression-to-the-mean problem, that 2019–2025 lacked the "shock" trigger, and that pre-2018 HMDA can't support a crisis-period test.
+- **Over:** pausing 4c for a new validation design; re-weighting toward the components that did better in the secondary analysis.
+- **Why:** neither backtest shows the Burden score anticipated delinquency (BACKTEST.md). Primary: ρ = −0.16, dominated by regression to the mean. Secondary: partial ρ = +0.006. The test period couldn't really test the theory either. The index's premise is that loaded households default when a shock hits (job loss, a price fall), and 2019–2025 had low unemployment, CARES Act forbearance and rising home equity. A crisis-period test would need pre-2018 HMDA, which lacks the fields the index uses (DTI, CLTV, interest rate, loan term and property value were added in 2018). The components still describe real, measured conditions.
+- **Cost accepted:** the map can't claim predictive value, and readers may still read "stress" as a forecast, so the copy has to say plainly that it isn't one.
