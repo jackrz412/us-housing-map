@@ -209,8 +209,27 @@ Two scores, one per trigger of the double trigger model (DECISIONS 020). Every c
 ### Limitations
 - **Non-mortgage debt enters only through D and R**, i.e. through new buyers' debt-to-income. Existing owners' card, auto and student debt isn't in the score (DECISIONS 023).
 - The weights are a stated choice, not an estimate. The 4b backtest tests them once and they aren't tuned afterwards.
-- **Backtest (4b, `BACKTEST.md`):** on 2019 inputs, higher Burden went with a *larger fall* in 90+ day delinquency by 2023–2025 (ρ = −0.16), most likely because the outcome is dominated by regression to the mean. A pre-specified secondary test controlling for the 2017–2019 level finds no Burden signal (partial ρ = +0.006). The index is presented as a description of current conditions, not a forecast (DECISIONS 030).
 - A score of 1.0 means "at the 2019 national level", not "safe".
+
+### A description, not a forecast: what the backtest showed
+The index describes where housing costs, borrowing and thin equity are **loaded now**, relative to 2019. **It is not shown to predict defaults, delinquency or foreclosures**, and the map doesn't present it that way (DECISIONS 030). Full results: `BACKTEST.md`.
+
+- **The test (DECISIONS 022, 028).** The scores were computed on 2019 inputs with the same code, for the 499 counties CFPB publishes (Connecticut excluded). They were compared with each county's change in 90+ day delinquency from 2017–2019 to 2023–2025. It was run once, with the analysis fixed in advance.
+- **The result.** Higher 2019 Burden went with a *larger fall* in delinquency (Spearman ρ = −0.16, 95% CI −0.24 to −0.07). The result held with 2018 inputs and a 2024–2025 window. Burden didn't beat its own inputs, and lower median income alone did about as well.
+- **Why the sign is negative: regression to the mean.** Delinquency fell in 92% of these counties, and how far it fell depends mostly on where it started (ρ = −0.77 between the 2017–2019 level and the change). Counties that started high fell the most. Burden, S and low income are all higher where 2017–2019 delinquency was higher, so a change score pulls them negative whether or not they carry a signal.
+- **The secondary test (DECISIONS 029)**, specified after the primary result and before it was computed, asks: among counties starting at the same 2017–2019 level, did higher-scoring ones end 2023–2025 higher? It ranks the 2023–2025 level and computes a partial correlation, controlling for the 2017–2019 level. **For Burden, the answer is no detectable relationship** (partial ρ = +0.006, CI −0.08 to +0.09). D, R and CLTV (the Equity score) point the expected way (+0.13, +0.23, +0.34), while PTI and S point the other way and cancel them inside Burden. Lower income alone scores +0.27.
+- **Why this period can't really test the theory.** The index measures the first trigger of a double-trigger default: a household that is stretched or has thin equity. Default usually also needs **a shock** (a job loss, or a price fall that wipes out equity). 2019–2025 mostly lacked one:
+  - **unemployment** was low apart from a brief 2020 spike;
+  - **CARES Act forbearance** let borrowers pause payments without being reported delinquent (which is why 2020–2022 is excluded);
+  - **home prices rose** sharply, so even thin-equity owners could usually sell or refinance rather than default.
+  With no shock, loaded counties had little reason to diverge, so a null result here doesn't show the index is wrong. A positive result wouldn't have proved it right either.
+- **Why not test on the 2007–2010 crisis instead?** The index needs loan-level fields that HMDA only started collecting in **2018**: debt-to-income ratio, combined LTV, interest rate, loan term and property value (Regulation C changes, effective with 2018 data). Pre-2018 HMDA has loan amount and income but none of these, so PTI, D, R and CLTV can't be computed for a crisis-era test.
+- **What that leaves.** The components are real, measured conditions: payments relative to income, debt-to-income lending, DTI denials, cost-burdened owners and high-CLTV lending, each compared with 2019. The map shows where they're high. It doesn't say where defaults will happen.
+
+### On the map (4c)
+- **Burden score** and **Equity score** layers: diverging, midpoint 1.0 = benchmark, breaks 0.67, 0.8, 0.9, 1.1, 1.25, 1.5 (roughly symmetric on a ratio scale; 0.9–1.1 grey = near benchmark). Legend: "Below benchmark / Above benchmark" (DECISIONS 031).
+- **Burden × Equity**: each score in three classes (below 0.9, 0.9–1.1, 1.1 and above), shown as a 3×3 grid; the top-right cell is "both above benchmark: heavy burden and thin equity". A county needs both scores to appear. Colors: `site/layers.js` `BIVARIATE` (checked for colorblind separation).
+- **Click panel**: an Index section with both scores, then each component with its value and its x (value ÷ benchmark), e.g. "43.8% · 1.53×". Flags: Burden on fewer than 3 of 4 inputs; PTI where the loan rules remove over 10% of loans.
 
 ---
 
@@ -225,3 +244,4 @@ Two scores, one per trigger of the double trigger model (DECISIONS 020). Every c
 | 2026-10-12 | 2f | Delinquency legend ends renamed "Better than baseline" / "Worse than baseline"; click-panel and table labels name what each value is a share of; fainter "Data not available" hatch on the delinquency layer. |
 | 2026-10-12 | 2g | High-CLTV layer limited to conventional loans; breaks 40–80% → 20, 30, 40, 50%; government-backed loan share added to the click panel (DECISIONS 019). |
 | 2026-10-16 | 4a | Stress index: Burden and Equity scores, fixed 2019 benchmarks, PTI loan rules (DECISIONS 020–025). |
+| 2026-10-16 | 4b/4c | Stress index section: the backtest, regression to the mean, the missing shock in 2019–2025 and why pre-2018 HMDA can't support a crisis-period test; the index is described, not presented as a forecast (DECISIONS 029–031). Index layers, bivariate view and panel section added to the map. |

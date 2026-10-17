@@ -1,8 +1,9 @@
-// Mortgage-risk county map: layer switcher, choropleth, tooltip, county
+// Mortgage county map: layer switcher, choropleth, tooltip, county
 // panel, keyboard navigation and table view. Layer definitions, breaks and
 // colors live in layers.js.
 //
-// Pipeline: TopoJSON (shapes) + data/<layer>.json ({fips: value}) ->
+// Pipeline: TopoJSON (shapes) + data/<file>.json ({fips: value}, or
+// {fips: {field: value}} for the index files; layers.js) ->
 // projection -> path generator -> one <path> per county, colored by a
 // threshold scale that changes with the selected layer.
 
@@ -19,16 +20,26 @@ const HEIGHT = 610;
 const inScope = (id) => +id.slice(0, 2) <= 56;
 
 const LAYER_BY_ID = new Map(MAP_LAYERS.map((l) => [l.id, l]));
+// Every map layer and panel row by id, with where its value comes from. A
+// panel row marked `layer: true` is the map layer of the same id.
+const SPECS = new Map(MAP_LAYERS.map((l) => [l.id, l]));
+for (const row of PANEL.flatMap((s) => s.rows)) if (!SPECS.has(row.id)) SPECS.set(row.id, row);
+// The file a value is read from (a pair layer reads its first member's file
+// for meta.json: both index files share one period).
+const fileOf = (id) => {
+  const spec = SPECS.get(id);
+  return spec?.pair ? fileOf(spec.pair[0]) : spec?.file ?? id;
+};
 // Every file the page needs: the map layers plus the panel's context metrics.
-const DATA_IDS = [...new Set(PANEL.flatMap((s) => s.rows.map((r) => r.id)))];
+const DATA_FILES = [...new Set([...SPECS.values()].filter((s) => !s.pair).map((s) => fileOf(s.id)))];
 
 Promise.all([
   d3.json(MAP_URL),
   d3.json(`${DATA_DIR}meta.json`),
-  ...DATA_IDS.map((id) => d3.json(`${DATA_DIR}${id}.json`)),
+  ...DATA_FILES.map((file) => d3.json(`${DATA_DIR}${file}.json`)),
 ])
   .then(([topo, meta, ...files]) => {
-    const data = Object.fromEntries(DATA_IDS.map((id, i) => [id, files[i]]));
+    const data = Object.fromEntries(DATA_FILES.map((file, i) => [file, files[i]]));
     init(topo, meta, data);
   })
   .catch((err) => {
@@ -92,20 +103,46 @@ function init(topo, meta, data) {
   // and so on, so N breaks -> N+1 colors. Breaks here are fixed benchmarks
   // (layers.js, DECISIONS 011), not quantiles of the data, so a color keeps
   // its meaning across counties, layers and data years.
-  const scales = new Map(MAP_LAYERS.map((l) => {
+  // The bivariate layer has no threshold scale: colorOf() picks its cell.
+  const scales = new Map(MAP_LAYERS.filter((l) => l.scale !== "bivariate").map((l) => {
     const n = l.breaks.length + 1;
     const range = l.scale === "diverging" ? DIVERGING : WARM[n];
     if (!range || range.length !== n) throw new Error(`no ${n}-class palette for ${l.id}`);
     return [l.id, d3.scaleThreshold().domain(l.breaks).range(range)];
   }));
 
-  // Per-county caveats from meta.json, as {layer: {flag: Set(fips)}}.
-  const flags = Object.fromEntries(DATA_IDS.map((id) => [id,
-    Object.fromEntries(Object.entries(meta[id]?.flags ?? {}).map(([k, v]) => [k, new Set(v)]))]));
-  const flagsFor = (id, fips) => Object.entries(flags[id] ?? {})
-    .filter(([, set]) => set.has(fips)).map(([k]) => FLAG_TEXT[k] ?? k);
+  const colorOf = (layer, v) => (layer.scale === "bivariate"
+    ? BIVARIATE[3 * bivariateClass(v[1]) + bivariateClass(v[0])]
+    : scales.get(layer.id)(v));
+  const metaOf = (id) => meta[fileOf(id)];
 
-  const valueOf = (id, fips) => data[id]?.[fips] ?? null;
+  // Per-county caveats from meta.json, as {file: {flag: Set(fips)}}. A row
+  // that reads one field of a file shows only the flags it lists (layers.js);
+  // a pair layer shows its members' flags.
+  const flags = Object.fromEntries(DATA_FILES.map((file) => [file,
+    Object.fromEntries(Object.entries(meta[file]?.flags ?? {}).map(([k, v]) => [k, new Set(v)]))]));
+  const flagsFor = (id, fips) => {
+    const spec = SPECS.get(id) ?? {};
+    if (spec.pair) return spec.pair.flatMap((p) => flagsFor(p, fips));
+    const allowed = spec.flags ?? (spec.field ? [] : null);
+    return Object.entries(flags[fileOf(id)] ?? {})
+      .filter(([k, set]) => (!allowed || allowed.includes(k)) && set.has(fips))
+      .map(([k]) => FLAG_TEXT[k] ?? k);
+  };
+
+  // A county's value for a layer or panel row: a number, [burden, equity]
+  // for the pair layer, or null when the source doesn't publish it.
+  const valueOf = (id, fips) => {
+    const spec = SPECS.get(id) ?? {};
+    if (spec.pair) {
+      const vs = spec.pair.map((p) => valueOf(p, fips));
+      return vs.includes(null) ? null : vs;
+    }
+    const v = data[fileOf(id)]?.[fips];
+    return (spec.field ? v?.[spec.field] : v) ?? null;
+  };
+  // A component's x (value ÷ 2019 benchmark), from the same file.
+  const xOf = (id, fips) => data[fileOf(id)]?.[fips]?.[SPECS.get(id).x] ?? null;
 
   // --- Page state ---------------------------------------------------------------
   const hash = new URLSearchParams(location.hash.slice(1));
@@ -326,6 +363,12 @@ function init(topo, meta, data) {
     where.className = "where";
     where.textContent = placeName(f);
     const parts = [value, where];
+    if (v != null && layer.describe) {
+      const kind = document.createElement("div");
+      kind.className = "where";
+      kind.textContent = layer.describe(v);
+      parts.push(kind);
+    }
     for (const text of v == null ? [] : flagsFor(layer.id, f.id)) {
       const flag = document.createElement("div");
       flag.className = "flag";
@@ -486,8 +529,11 @@ function init(topo, meta, data) {
       for (const row of section.rows) {
         const layer = row.layer ? LAYER_BY_ID.get(row.id) : null;
         const name = layer ? layer.panelName : row.name;
-        const format = layer ? layer.format : row.format;
+        // The pair layer's two numbers are the rows above it; it shows which
+        // cell of the grid the county is in instead.
+        const format = layer ? layer.describe ?? layer.format : row.format;
         const v = valueOf(row.id, fips);
+        const x = row.x && v != null ? xOf(row.id, fips) : null;
 
         const div = document.createElement("div");
         div.className = `row${row.id === state.layer ? " active" : ""}`;
@@ -496,13 +542,15 @@ function init(topo, meta, data) {
         // Only map layers get a color chip; context metrics stay neutral.
         if (layer && v != null) {
           chip.classList.add("filled");
-          chip.style.background = scales.get(layer.id)(v);
+          chip.style.background = colorOf(layer, v);
         }
         const dt = document.createElement("dt");
         dt.textContent = name;
         const dd = document.createElement("dd");
-        dd.textContent = v == null ? "Data not available" : format(v);
+        dd.textContent = v == null ? "Data not available"
+          : x == null ? format(v) : `${format(v)} · ${fmt.ratio(x)}`;
         if (v == null) dd.className = "na";
+        else if (layer?.describe) dd.className = "text";
         div.append(chip, dt, dd);
         for (const text of v == null ? [] : flagsFor(row.id, fips)) {
           const flag = document.createElement("span");
@@ -518,7 +566,22 @@ function init(topo, meta, data) {
   }
 
   // --- Legend ---------------------------------------------------------------------
+  // The bivariate key's grid, built once: top row = high Equity.
+  document.getElementById("bk-grid").replaceChildren(...[2, 1, 0].flatMap((j) => [0, 1, 2].map((i) => {
+    const cell = document.createElement("span");
+    cell.style.background = BIVARIATE[3 * j + i];
+    return cell;
+  })));
+
   function renderLegend(layer) {
+    const bivariate = layer.scale === "bivariate";
+    document.getElementById("ramp").hidden = bivariate;
+    document.getElementById("bivariate-key").hidden = !bivariate;
+    if (bivariate) {
+      document.getElementById("legend-unit").textContent =
+        [layer.unit, metaOf(layer.id)?.legend_period].filter(Boolean).join(" · ");
+      return;
+    }
     const scale = scales.get(layer.id);
     const colors = scale.range();
     const n = colors.length;
@@ -547,7 +610,7 @@ function init(topo, meta, data) {
       return s;
     }));
     // SPEC: every layer shows its data period in the legend.
-    const bits = [layer.unit, meta[layer.id]?.legend_period];
+    const bits = [layer.unit, metaOf(layer.id)?.legend_period];
     if (layer.neutral) bits.push(`grey = ${layer.neutral}`);
     document.getElementById("legend-unit").textContent = bits.filter(Boolean).join(" · ");
   }
@@ -571,18 +634,25 @@ function init(topo, meta, data) {
     if (!tableView.open) return;
     const layer = LAYER_BY_ID.get(state.layer);
     const q = tableFilter.value.trim().toLowerCase();
-    let rows = counties.map((f) => ({
-      fips: f.id,
-      name: f.properties.name,
-      state: stateName.get(f.id.slice(0, 2)),
-      value: valueOf(layer.id, f.id),
-    }));
+    let rows = counties.map((f) => {
+      const value = valueOf(layer.id, f.id);
+      return {
+        fips: f.id,
+        name: f.properties.name,
+        state: stateName.get(f.id.slice(0, 2)),
+        value,
+        // What the Value column sorts by: the number, or for the pair layer
+        // its combined class, then Burden (layers.js sortValue).
+        sortValue: value == null || !layer.sortValue ? value : layer.sortValue(value),
+      };
+    });
     if (q) rows = rows.filter((r) => `${r.name}, ${r.state}`.toLowerCase().includes(q));
     const { key, dir } = state.sort;
     rows.sort((a, b) => {
       // Missing values always sort last, whichever direction.
       if (key === "value" && (a.value == null) !== (b.value == null)) return a.value == null ? 1 : -1;
-      return dir * d3.ascending(a[key], b[key]) || d3.ascending(a.name, b.name);
+      const k = key === "value" ? "sortValue" : key;
+      return dir * d3.ascending(a[k], b[k]) || d3.ascending(a.name, b.name);
     });
 
     document.getElementById("value-header").textContent = layer.panelName;
@@ -591,7 +661,7 @@ function init(topo, meta, data) {
       th.setAttribute("aria-sort", k === key ? (dir > 0 ? "ascending" : "descending") : "none");
     });
     document.getElementById("table-caption").textContent =
-      `${layer.title}, ${meta[layer.id]?.legend_period ?? ""}, by county`;
+      `${layer.title}, ${metaOf(layer.id)?.legend_period ?? ""}, by county`;
     const withData = rows.filter((r) => r.value != null).length;
     document.getElementById("table-count").textContent =
       `${rows.length.toLocaleString("en-US")} counties shown, ${withData.toLocaleString("en-US")} with data`;
@@ -611,7 +681,8 @@ function init(topo, meta, data) {
       val.className = r.value == null ? "num na" : "num";
       val.textContent = r.value == null ? "Data not available" : layer.format(r.value);
       const notes = document.createElement("td");
-      notes.textContent = r.value == null ? "" : flagsFor(layer.id, r.fips).join("; ");
+      notes.textContent = r.value == null ? ""
+        : [layer.describe?.(r.value), ...flagsFor(layer.id, r.fips)].filter(Boolean).join("; ");
       tr.append(name, st, val, notes);
       return tr;
     }));
@@ -626,14 +697,13 @@ function init(topo, meta, data) {
 
   function render() {
     const layer = LAYER_BY_ID.get(state.layer);
-    const scale = scales.get(layer.id);
     // Re-color the existing paths; the join from first draw still holds.
     // Missing counties are "transparent" rather than "none": a transparent
     // fill still counts as painted, so they keep hover, click and focus.
     countyPaths
       .style("fill", (f) => {
         const v = valueOf(layer.id, f.id);
-        return v == null ? "transparent" : scale(v);
+        return v == null ? "transparent" : colorOf(layer, v);
       })
       .attr("aria-label", (f) => {
         const v = valueOf(layer.id, f.id);
@@ -651,10 +721,10 @@ function init(topo, meta, data) {
     mapCard.classList.toggle("na-quiet", layer.id === "cfpb_delinquency_z");
 
     document.getElementById("layer-title").textContent = layer.title;
-    const values = Object.values(data[layer.id]);
-    const withData = values.filter((v) => v != null).length;
+    const ids = Object.keys(data[fileOf(layer.id)] ?? {});
+    const withData = ids.filter((f) => valueOf(layer.id, f) != null).length;
     document.getElementById("layer-sub").textContent =
-      `${meta[layer.id]?.legend_period ?? ""} · data for ${withData.toLocaleString("en-US")} of ${values.length.toLocaleString("en-US")} counties`;
+      `${metaOf(layer.id)?.legend_period ?? ""} · data for ${withData.toLocaleString("en-US")} of ${ids.length.toLocaleString("en-US")} counties`;
     renderLegend(layer);
     renderPanel();
     renderTable();
@@ -662,10 +732,10 @@ function init(topo, meta, data) {
   }
 
   // Sources line, from meta.json.
-  const periods = [...new Set(DATA_IDS.map((id) => meta[id]?.legend_period).filter(Boolean))];
-  const processed = d3.max(DATA_IDS, (id) => meta[id]?.run_date);
+  const periods = [...new Set(DATA_FILES.map((file) => meta[file]?.legend_period).filter(Boolean))];
+  const processed = d3.max(DATA_FILES, (file) => meta[file]?.run_date);
   document.getElementById("sources").textContent =
-    `Sources: ${periods.join("; ")} (CFPB Mortgage Performance Trends, Census ACS, FFIEC HMDA, Census Building Permits Survey). Processed ${processed}.`;
+    `Sources: ${periods.join("; ")} (CFPB Mortgage Performance Trends, Census ACS, FFIEC HMDA, Census Building Permits Survey, Treasury Federal Insurance Office). Processed ${processed}.`;
 
   render();
   if (state.selected) select(state.selected);

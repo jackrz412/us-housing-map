@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Where mortgage stress is building: a county-level view</title>
+  <title>Mortgage stress, county by county</title>
   <!-- Preload the two faces visible on first paint so the swap happens early. -->
   <link rel="preload" href="fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/ibm-plex-serif-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <meta name="description" content="Where US mortgage risk is building, county by county: delinquency, payment burden and equity.">
+  <meta name="description" content="US mortgage conditions, county by county: delinquency, payment burden, thin equity and a descriptive stress index.">
   <style>
     /* IBM Plex, self-hosted (Fontsource 5.3.0, OFL), matching jackrz412.github.io.
        Only the weights in use: Sans 400 and 600, Serif 600 (title). Latin and
@@ -158,7 +158,10 @@
 
     /* Legend */
     .legend { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 20px; margin-bottom: 4px; }
-    .ramp { flex: 1 1 300px; max-width: 480px; }
+    .legend-main { flex: 1 1 300px; max-width: 480px; }
+    /* The ramp and the bivariate key swap in place; one shared minimum height
+       keeps the map from moving when they do. */
+    .ramp, .bivariate-key { min-height: 52px; }
     .swatches { display: grid; gap: 2px; height: 12px; }
     .swatches span { border-radius: 2px; }
     .ticks { position: relative; height: 18px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -176,6 +179,16 @@
       /* Delinquency's title wraps to 3 lines up to ~390px, and its legend ends to 2 lines below ~340px. */
       .ends { min-height: 2.8em; min-height: 2lh; }
     }
+    /* Bivariate key (Burden × Equity): a 3×3 grid beside three lines of text,
+       about as tall as the ramp + ticks + ends it replaces, so switching to it
+       doesn't move the map. Rows run bottom to top (Equity), columns left to
+       right (Burden). */
+    .bivariate-key { display: flex; gap: 10px; align-items: center; }
+    .bivariate-key[hidden], .ramp[hidden] { display: none; }
+    .bk-grid { display: grid; grid-template-columns: repeat(3, 14px); grid-template-rows: repeat(3, 14px); gap: 2px; flex: none; }
+    .bk-grid span { border-radius: 2px; }
+    .bk-text { font-size: 12px; line-height: 1.4; color: var(--ink-2); }
+    .bk-text p { margin: 0; }
     .na-quiet { --na-line: var(--na-line-quiet); }
     .na-key { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
     .na-key svg { flex: none; border: 1px solid var(--border); border-radius: 2px; }
@@ -233,6 +246,9 @@
     .row dt { font-size: 13px; color: var(--ink-2); }
     .row dd { margin: 0; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
     .row dd.na { font-weight: 400; color: var(--muted); font-size: 13px; }
+    /* A description rather than a number (the Burden × Equity cell): its own
+       line under the label, so neither is squeezed. */
+    .row dd.text { grid-column: 2 / 4; text-align: left; font-weight: 400; font-size: 13px; color: var(--ink); }
     .row .flag { grid-column: 2 / 4; font-size: 12px; color: var(--ink-2); }
     .row .flag::before { content: "⚠ "; }
     .panel-close {
@@ -293,11 +309,12 @@
   </header>
 
   <main>
-    <h1>Where mortgage stress is building: a county-level view</h1>
+    <h1>Mortgage stress, county by county: where households are stretched now</h1>
     <p class="lede">
       Mortgage defaults usually need two things at once: a household that is stretched (a heavy payment burden or thin equity) and a shock such as a job loss.
-      These layers show where the first half is loaded, and where delinquency is already rising. They describe conditions; they don't predict defaults.
-      <a id="methodology-link" href="#">How each layer is calculated</a>.
+      These layers show where the first half is loaded, and where delinquency is already rising. The Index layers combine them into two scores against fixed 2019 national benchmarks.
+      They describe conditions; they don't predict defaults. A backtest found the scores did not anticipate how delinquency changed from 2019 to 2025.
+      <a id="methodology-link" href="#">How each layer is calculated, and the backtest</a>.
     </p>
 
     <fieldset class="switcher" id="switcher">
@@ -309,10 +326,20 @@
         <p class="layer-title" id="layer-title">Loading…</p>
         <p class="layer-sub" id="layer-sub"></p>
         <div class="legend" id="legend" aria-hidden="true">
-          <div class="ramp">
-            <div class="swatches" id="swatches"></div>
-            <div class="ticks" id="ticks"></div>
-            <div class="ends" id="ends"></div>
+          <div class="legend-main">
+            <div class="ramp" id="ramp">
+              <div class="swatches" id="swatches"></div>
+              <div class="ticks" id="ticks"></div>
+              <div class="ends" id="ends"></div>
+            </div>
+            <div class="bivariate-key" id="bivariate-key" hidden>
+              <div class="bk-grid" id="bk-grid"></div>
+              <div class="bk-text">
+                <p>Burden score ▶ across: below 0.9, 0.9–1.1, above 1.1</p>
+                <p>Equity score ▲ up: the same three classes</p>
+                <p>Top right: both above benchmark (heavy burden and thin equity)</p>
+              </div>
+            </div>
             <div class="legend-unit" id="legend-unit"></div>
           </div>
           <div class="na-key">
@@ -368,7 +395,8 @@
 
     <div class="notes">
       <p>Grey hatching means <strong>Data not available</strong>: the source doesn't publish that county, or its sample is too small (fewer than 30 loans or owner households). Missing data is excluded, not estimated.</p>
-      <p>Colors use fixed breaks, so a color means the same thing in every county. Two layers use two-sided scales with a grey middle: delinquency is compared with each county's own 2017–2019 average, and owner cost burden with the US share. Blue means below that midpoint, not "safe".</p>
+      <p>Colors use fixed breaks, so a color means the same thing in every county. Four layers use two-sided scales with a grey middle: delinquency is compared with each county's own 2017–2019 average, owner cost burden with the US share, and the two index scores with their 2019 national benchmark (1.0). Blue means below that midpoint, not "safe".</p>
+      <p>The index scores are descriptive: 1.0 means a county's inputs sit at the 2019 national level. They are not probabilities of default, and the weights are a stated choice, not fitted to outcomes.</p>
       <p id="sources"></p>
     </div>
   </main>
