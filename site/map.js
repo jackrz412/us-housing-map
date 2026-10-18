@@ -127,7 +127,7 @@ function init(topo, meta, data) {
     const allowed = spec.flags ?? (spec.field ? [] : null);
     return Object.entries(flags[fileOf(id)] ?? {})
       .filter(([k, set]) => (!allowed || allowed.includes(k)) && set.has(fips))
-      .map(([k]) => FLAG_TEXT[k] ?? k);
+      .map(([k]) => FLAG_TEXT[k] ?? k);  // may hold [[term]] markup
   };
 
   // A county's value for a layer or panel row: a number, [burden, equity]
@@ -372,7 +372,7 @@ function init(topo, meta, data) {
     for (const text of v == null ? [] : flagsFor(layer.id, f.id)) {
       const flag = document.createElement("div");
       flag.className = "flag";
-      flag.textContent = text;
+      flag.textContent = plainText(text);
       parts.push(flag);
     }
     tip.replaceChildren(...parts);
@@ -498,6 +498,8 @@ function init(topo, meta, data) {
   }
 
   function renderPanel() {
+    // The panel is about to be rebuilt; don't leave a card for a removed term.
+    if (termOpen && panel.contains(termOpen)) hideTermTip();
     const fips = state.selected;
     if (!fips) {
       const empty = document.createElement("p");
@@ -545,17 +547,18 @@ function init(topo, meta, data) {
           chip.style.background = colorOf(layer, v);
         }
         const dt = document.createElement("dt");
-        dt.textContent = name;
+        setTermText(dt, name);
         const dd = document.createElement("dd");
-        dd.textContent = v == null ? "Data not available"
-          : x == null ? format(v) : `${format(v)} · ${fmt.ratio(x)}`;
+        // Components show their x as a glossary term, so "1.53×" explains itself.
+        setTermText(dd, v == null ? "Data not available"
+          : x == null ? format(v) : `${format(v)} · [[x|${fmt.ratio(x)}]]`);
         if (v == null) dd.className = "na";
         else if (layer?.describe) dd.className = "text";
         div.append(chip, dt, dd);
         for (const text of v == null ? [] : flagsFor(row.id, fips)) {
           const flag = document.createElement("span");
           flag.className = "flag";
-          flag.textContent = text;
+          setTermText(flag, text);
           div.append(flag);
         }
         dl.append(div);
@@ -579,7 +582,7 @@ function init(topo, meta, data) {
     document.getElementById("bivariate-key").hidden = !bivariate;
     if (bivariate) {
       setTermText(document.getElementById("legend-unit"),
-        [layer.unit, metaOf(layer.id)?.legend_period].filter(Boolean).join(" · "));
+        markPeriods([layer.unit, metaOf(layer.id)?.legend_period].filter(Boolean).join(" · ")));
       return;
     }
     const scale = scales.get(layer.id);
@@ -612,12 +615,13 @@ function init(topo, meta, data) {
     // SPEC: every layer shows its data period in the legend.
     const bits = [layer.unit, metaOf(layer.id)?.legend_period];
     if (layer.neutral) bits.push(`grey = ${layer.neutral}`);
-    setTermText(document.getElementById("legend-unit"), bits.filter(Boolean).join(" · "));
+    setTermText(document.getElementById("legend-unit"), markPeriods(bits.filter(Boolean).join(" · ")));
   }
 
   // --- Glossary terms ----------------------------------------------------------------
   // Layer titles and legend captions mark terms as [[key|text]] (layers.js
-  // GLOSSARY). Each becomes a button with a dotted underline that opens a small
+  // GLOSSARY). Each becomes an inline role="button" span (a real <button> can't
+  // wrap across lines) with a dotted underline that opens a small
   // definition: on hover or keyboard focus, and on tap/click (which keeps it
   // open until a tap elsewhere, Esc, or scrolling).
   const termTip = document.getElementById("term-tip");
@@ -629,9 +633,10 @@ function init(topo, meta, data) {
     let last = 0;
     for (const m of text.matchAll(TERM_MARKUP)) {
       parts.push(text.slice(last, m.index));
-      const btn = document.createElement("button");
-      btn.type = "button";
+      const btn = document.createElement("span");
       btn.className = "term";
+      btn.setAttribute("role", "button");
+      btn.tabIndex = 0;
       btn.dataset.term = m[1];
       btn.textContent = m[2];
       parts.push(btn);
@@ -698,21 +703,27 @@ function init(topo, meta, data) {
   document.addEventListener("focusout", (event) => {
     if (event.target.closest?.(".term") && !termPinned) hideTermTip();
   });
+  function toggleTerm(btn) {
+    if (termPinned && termOpen === btn) { hideTermTip(); return; }
+    showTermTip(btn);
+    termPinned = true;
+  }
   document.addEventListener("click", (event) => {
     const btn = event.target.closest?.(".term");
-    if (btn) {
-      if (termPinned && termOpen === btn) { hideTermTip(); return; }
-      showTermTip(btn);
-      termPinned = true;
-    } else {
-      hideTermTip();
-    }
+    if (btn) toggleTerm(btn);
+    else hideTermTip();
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && termOpen) hideTermTip();
+    // Enter and Space, as a native button would.
+    const btn = event.target.closest?.(".term");
+    if (btn && (event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      toggleTerm(btn);
+    }
   });
-  // position: fixed would leave it behind as the page scrolls.
-  window.addEventListener("scroll", hideTermTip, { passive: true });
+  // position: fixed would leave it behind as the page, or the panel, scrolls.
+  document.addEventListener("scroll", hideTermTip, { capture: true, passive: true });
   window.addEventListener("resize", hideTermTip);
 
   // --- Table view -------------------------------------------------------------------
@@ -755,7 +766,7 @@ function init(topo, meta, data) {
       return dir * d3.ascending(a[k], b[k]) || d3.ascending(a.name, b.name);
     });
 
-    document.getElementById("value-header").textContent = layer.panelName;
+    document.getElementById("value-header").textContent = plainText(layer.panelName);
     document.querySelectorAll("thead th").forEach((th) => {
       const k = th.querySelector("button")?.dataset.sort;
       th.setAttribute("aria-sort", k === key ? (dir > 0 ? "ascending" : "descending") : "none");
@@ -782,7 +793,7 @@ function init(topo, meta, data) {
       val.textContent = r.value == null ? "Data not available" : layer.format(r.value);
       const notes = document.createElement("td");
       notes.textContent = r.value == null ? ""
-        : [layer.describe?.(r.value), ...flagsFor(layer.id, r.fips)].filter(Boolean).join("; ");
+        : [layer.describe?.(r.value), ...flagsFor(layer.id, r.fips).map(plainText)].filter(Boolean).join("; ");
       tr.append(name, st, val, notes);
       return tr;
     }));
