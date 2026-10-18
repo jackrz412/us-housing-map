@@ -67,6 +67,9 @@ const BIVARIATE_LEVELS = ["below", "near", "above"];
 const bivariateClass = (v) => BIVARIATE_BREAKS.filter((b) => v >= b).length;
 
 // --- Map layers, grouped by role --------------------------------------------------
+// `title` and `unit` may mark glossary terms as [[key|shown text]] (GLOSSARY
+// below); the page shows those as small definition tooltips. Use plainText()
+// wherever the text is needed without them.
 // `name` is the short switcher label. `panelName` is used in the click panel
 // and table, where each value sits next to a number: it says what the value
 // is a share (or ratio) of, so "34%" can't be misread.
@@ -89,11 +92,11 @@ const MAP_LAYERS = [
     role: "outcome",
     name: "Delinquency vs baseline",
     panelName: "Delinquency vs own 2017–2019 average",
-    title: "90+ day mortgage delinquency compared with each county's 2017–2019 normal",
+    title: "[[delinquency|90+ day mortgage delinquency]] compared with each county's 2017–2019 normal",
     scale: "diverging",
     breaks: [-2, -1, -0.5, 0.5, 1, 2],
     tick: tick.z,
-    unit: "Standard deviations from the county's 2017–2019 average",
+    unit: "[[sd|Standard deviations]] from the county's 2017–2019 average",
     neutral: "−0.5 to +0.5: near baseline",
     // Midpoint is the county's own 2017–2019 baseline (z = 0). Higher
     // delinquency is worse, so the ends say which way is better.
@@ -105,7 +108,7 @@ const MAP_LAYERS = [
     role: "burden",
     name: "Owner cost burden",
     panelName: "Mortgaged owners paying 30%+",
-    title: "Share of mortgaged owners paying 30% or more of income on housing",
+    title: "Share of mortgaged owners [[cost_burden|paying 30% or more of income on housing]]",
     scale: "diverging",
     // Neutral class 25–30% contains the US share (28.1%).
     breaks: [15, 20, 25, 30, 35, 40],
@@ -121,7 +124,7 @@ const MAP_LAYERS = [
     role: "burden",
     name: "High-DTI loans",
     panelName: "2025 loans with DTI above 43%",
-    title: "Share of 2025 home-purchase loans with debt-to-income above 43%",
+    title: "Share of 2025 home-purchase loans with [[dti|debt-to-income]] above 43%",
     scale: "sequential",
     breaks: [20, 30, 40, 50],
     tick: tick.pct,
@@ -133,7 +136,7 @@ const MAP_LAYERS = [
     role: "burden",
     name: "Property tax burden",
     panelName: "Median property tax as % of owner income",
-    title: "Median property tax as a share of median owner income (ratio of medians)",
+    title: "Median property tax as a share of median owner income ([[ratio_of_medians|ratio of medians]])",
     scale: "sequential",
     breaks: [1, 1.5, 2, 2.5, 3, 4],
     tick: tick.pct,
@@ -145,7 +148,7 @@ const MAP_LAYERS = [
     role: "equity",
     name: "High-CLTV loans",
     panelName: "2025 conventional loans with CLTV above 90%",
-    title: "Share of 2025 conventional purchase loans with combined LTV above 90%",
+    title: "Share of 2025 [[conventional|conventional]] purchase loans with [[cltv|combined loan-to-value (CLTV)]] above 90%",
     scale: "sequential",
     // Conventional loans only (DECISIONS 019). 30% is about the national share.
     breaks: [20, 30, 40, 50],
@@ -160,11 +163,11 @@ const MAP_LAYERS = [
     flags: ["fewer_than_3_components"],
     name: "Burden score",
     panelName: "Burden score (1.0 = 2019 benchmark)",
-    title: "Burden score: payment burden, high-DTI lending, DTI denials and owner cost burden vs 2019",
+    title: "[[burden_score|Burden score]]: [[pti|payment burden]], [[dti|high-DTI lending]], [[dti_denials|DTI denials]] and [[cost_burden|owner cost burden]] vs 2019",
     scale: "diverging",
     breaks: INDEX_BREAKS,
     tick: tick.ratio,
-    unit: "× the 2019 national benchmark",
+    unit: "× the [[benchmark|2019 national benchmark]]",
     neutral: "0.9–1.1: near benchmark",
     ends: ["Below benchmark", "Above benchmark"],
     format: fmt.ratio,
@@ -175,11 +178,11 @@ const MAP_LAYERS = [
     file: "equity", field: "equity",
     name: "Equity score",
     panelName: "Equity score (1.0 = 2019 benchmark)",
-    title: "Equity score: share of conventional loans above 90% CLTV vs 2019",
+    title: "[[equity_score|Equity score]]: share of [[conventional|conventional]] loans above 90% [[cltv|CLTV]] vs 2019",
     scale: "diverging",
     breaks: INDEX_BREAKS,
     tick: tick.ratio,
-    unit: "× the 2019 national benchmark",
+    unit: "× the [[benchmark|2019 national benchmark]]",
     neutral: "0.9–1.1: near benchmark",
     ends: ["Below benchmark", "Above benchmark"],
     format: fmt.ratio,
@@ -191,7 +194,7 @@ const MAP_LAYERS = [
     pair: ["index_burden", "index_equity"],
     name: "Burden × Equity",
     panelName: "Burden × Equity",
-    title: "Burden and Equity scores together: where both are above the 2019 benchmark",
+    title: "[[burden_score|Burden]] and [[equity_score|Equity scores]] together: where both are above the [[benchmark|2019 benchmark]]",
     scale: "bivariate",
     unit: "Scores × the 2019 national benchmark",
     format: ([b, e]) => `Burden ${fmt.ratio(b)} · Equity ${fmt.ratio(e)}`,
@@ -278,3 +281,75 @@ const FLAG_TEXT = {
 };
 
 const METHODOLOGY_URL = "https://github.com/jackrz412/us-housing-map/blob/main/METHODOLOGY.md";
+
+// --- Glossary ----------------------------------------------------------------------
+// Definitions behind the [[key|text]] terms in layer titles and units. Each is
+// a one- or two-sentence functional definition plus a worked example; the
+// numbers in examples are illustrative, except benchmarks, which are the real
+// 2019 values (METHODOLOGY.md, Stress index).
+const GLOSSARY = {
+  delinquency: {
+    term: "90+ day delinquency",
+    def: "A mortgage is 90+ days delinquent when the borrower is three or more monthly payments behind. The rate is the share of mortgages in that state.",
+    example: "12 of 1,000 mortgages 90+ days late → 12 ÷ 1,000 = 1.2%",
+  },
+  sd: {
+    term: "Standard deviations (SD)",
+    def: "How unusual the latest rate is for this county, measured in its own typical month-to-month swing during 2017–2019. 0 = its 2017–2019 average.",
+    example: "Average 1.0%, SD 0.2 pts, latest 1.4% → (1.4 − 1.0) ÷ 0.2 = +2 SD",
+  },
+  cost_burden: {
+    term: "Owner cost burden",
+    def: "Monthly owner costs (mortgage, property tax, insurance, utilities, HOA fees) as a share of household income. 30% or more counts as cost-burdened.",
+    example: "$2,100 costs ÷ $6,000 monthly income = 35% → cost-burdened",
+  },
+  dti: {
+    term: "Debt-to-income ratio (DTI)",
+    def: "All monthly debt payments, the new mortgage plus car, student loan and card payments, divided by gross monthly income, as the lender calculated it. 43% was the long-standing Qualified Mortgage cap.",
+    example: "$2,500 mortgage + $650 other debts on $7,000 income → 3,150 ÷ 7,000 = 45%, above 43%",
+  },
+  ratio_of_medians: {
+    term: "Ratio of medians",
+    def: "The county's median property tax divided by its median owner income. The two medians usually belong to different households, so it isn't any one owner's share.",
+    example: "$3,000 median tax ÷ $90,000 median income = 3.3%",
+  },
+  conventional: {
+    term: "Conventional loan",
+    def: "A mortgage that isn't insured or guaranteed by a government program (FHA, VA or USDA). Those programs allow small down payments by design, so they're left out.",
+    example: "100 purchase loans: 70 conventional, 30 FHA or VA → only the 70 are counted",
+  },
+  cltv: {
+    term: "Loan-to-value (LTV) and combined LTV (CLTV)",
+    def: "LTV is the mortgage divided by the home's value; 100% minus LTV is the buyer's equity. CLTV adds any second mortgage or home-equity loan. Above 90% means under 10% equity.",
+    example: "$340,000 first + $25,000 second on a $400,000 home → LTV 85%, CLTV 365 ÷ 400 = 91%",
+  },
+  pti: {
+    term: "Payment-to-income (PTI)",
+    def: "A new buyer's monthly principal, interest, property tax and insurance divided by their gross monthly income. The county value is the median across 2025 loans; the benchmark is 28%.",
+    example: "$1,900 loan payment + $350 tax + $150 insurance on $8,000 income → 2,400 ÷ 8,000 = 30%",
+  },
+  dti_denials: {
+    term: "DTI denials",
+    def: "The share of home-purchase applications that lenders decided on and denied, citing debt-to-income as a reason.",
+    example: "45 of 1,000 decided applications denied for DTI → 4.5% (2019 benchmark 4.10%)",
+  },
+  benchmark: {
+    term: "2019 national benchmark",
+    def: "Each input's 2019 US value, fixed for good. A county's value is divided by it, so 1.0 = the 2019 national level and 1.2 = 20% above it.",
+    example: "High-DTI benchmark 28.52%; a county at 34.2% → 34.2 ÷ 28.52 = 1.20×",
+  },
+  burden_score: {
+    term: "Burden score",
+    def: "Half new-buyer strain (the average of payment-to-income, high-DTI share and DTI denials), half existing owners' cost burden. Each input is first divided by its 2019 benchmark.",
+    example: "New-buyer inputs 1.3×, 1.1×, 1.0× → 1.13; owners 0.95× → 0.5 × 1.13 + 0.5 × 0.95 = 1.04",
+  },
+  equity_score: {
+    term: "Equity score",
+    def: "The share of conventional loans above 90% CLTV, divided by the 2019 national share (36.03%). Higher means more recent buyers with thin equity.",
+    example: "45% of loans above 90% CLTV → 45 ÷ 36.03 = 1.25×",
+  },
+};
+
+// Glossary markup: [[key|shown text]].
+const TERM_MARKUP = /\[\[(\w+)\|([^\]]+)\]\]/g;
+const plainText = (s) => s.replace(TERM_MARKUP, "$2");

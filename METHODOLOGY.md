@@ -246,3 +246,4 @@ The index describes where housing costs, borrowing and thin equity are **loaded 
 | 2026-10-16 | 4a | Stress index: Burden and Equity scores, fixed 2019 benchmarks, PTI loan rules (DECISIONS 020–025). |
 | 2026-10-16 | 4b/4c | Stress index section: the backtest, regression to the mean, the missing shock in 2019–2025 and why pre-2018 HMDA can't support a crisis-period test; the index is described, not presented as a forecast (DECISIONS 029–031). Index layers, bivariate view and panel section added to the map. |
 | 2026-10-16 | 4d | Index methodology page on the site (`site/methodology.html`): formulas, vintages, backtest results and limitations, linked from the map intro and notes. |
+| 2026-10-18 | UI | Glossary tooltips on layer titles and legend captions: a short definition and a worked example for each term (`site/layers.js` `GLOSSARY`). High-CLTV title now spells out "combined loan-to-value (CLTV)". No metric changed. |

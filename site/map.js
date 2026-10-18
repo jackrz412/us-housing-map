@@ -578,8 +578,8 @@ function init(topo, meta, data) {
     document.getElementById("ramp").hidden = bivariate;
     document.getElementById("bivariate-key").hidden = !bivariate;
     if (bivariate) {
-      document.getElementById("legend-unit").textContent =
-        [layer.unit, metaOf(layer.id)?.legend_period].filter(Boolean).join(" · ");
+      setTermText(document.getElementById("legend-unit"),
+        [layer.unit, metaOf(layer.id)?.legend_period].filter(Boolean).join(" · "));
       return;
     }
     const scale = scales.get(layer.id);
@@ -612,8 +612,108 @@ function init(topo, meta, data) {
     // SPEC: every layer shows its data period in the legend.
     const bits = [layer.unit, metaOf(layer.id)?.legend_period];
     if (layer.neutral) bits.push(`grey = ${layer.neutral}`);
-    document.getElementById("legend-unit").textContent = bits.filter(Boolean).join(" · ");
+    setTermText(document.getElementById("legend-unit"), bits.filter(Boolean).join(" · "));
   }
+
+  // --- Glossary terms ----------------------------------------------------------------
+  // Layer titles and legend captions mark terms as [[key|text]] (layers.js
+  // GLOSSARY). Each becomes a button with a dotted underline that opens a small
+  // definition: on hover or keyboard focus, and on tap/click (which keeps it
+  // open until a tap elsewhere, Esc, or scrolling).
+  const termTip = document.getElementById("term-tip");
+  let termOpen = null;     // the button whose definition is showing
+  let termPinned = false;  // opened by a click/tap rather than hover/focus
+
+  function setTermText(el, text) {
+    const parts = [];
+    let last = 0;
+    for (const m of text.matchAll(TERM_MARKUP)) {
+      parts.push(text.slice(last, m.index));
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "term";
+      btn.dataset.term = m[1];
+      btn.textContent = m[2];
+      parts.push(btn);
+      last = m.index + m[0].length;
+    }
+    parts.push(text.slice(last));
+    el.replaceChildren(...parts);
+  }
+
+  function showTermTip(btn) {
+    const entry = GLOSSARY[btn.dataset.term];
+    if (!entry) return;
+    if (termOpen !== btn) {
+      termOpen?.removeAttribute("aria-describedby");
+      const term = document.createElement("div");
+      term.className = "tt-term";
+      term.textContent = entry.term;
+      const def = document.createElement("div");
+      def.textContent = entry.def;
+      const ex = document.createElement("div");
+      ex.className = "tt-example";
+      const label = document.createElement("span");
+      label.textContent = "Example: ";
+      ex.append(label, entry.example);
+      termTip.replaceChildren(term, def, ex);
+      termOpen = btn;
+      btn.setAttribute("aria-describedby", "term-tip");
+    }
+    termTip.hidden = false;
+    // Below the term, left-aligned with it; above it if there's no room
+    // below; always inside the window.
+    const r = btn.getBoundingClientRect();
+    const { width, height } = termTip.getBoundingClientRect();
+    const left = Math.min(Math.max(8, r.left), window.innerWidth - width - 8);
+    let top = r.bottom + 6;
+    if (top + height > window.innerHeight - 8) top = Math.max(8, r.top - height - 6);
+    termTip.style.transform = `translate(${Math.max(8, left)}px, ${top}px)`;
+  }
+
+  function hideTermTip() {
+    if (!termOpen) return;
+    termOpen.removeAttribute("aria-describedby");
+    termOpen = null;
+    termPinned = false;
+    termTip.hidden = true;
+  }
+
+  // Delegated, so it covers terms in text that's re-rendered on every layer
+  // change. The card ignores the pointer (CSS), so it never blocks the term
+  // or map under it.
+  document.addEventListener("pointerover", (event) => {
+    if (event.pointerType !== "mouse" || termPinned) return;
+    const btn = event.target.closest?.(".term");
+    if (btn) showTermTip(btn);
+  });
+  document.addEventListener("pointerout", (event) => {
+    if (event.pointerType !== "mouse" || termPinned) return;
+    if (event.target.closest?.(".term") && document.activeElement !== event.target.closest(".term")) hideTermTip();
+  });
+  document.addEventListener("focusin", (event) => {
+    const btn = event.target.closest?.(".term");
+    if (btn && !termPinned) showTermTip(btn);
+  });
+  document.addEventListener("focusout", (event) => {
+    if (event.target.closest?.(".term") && !termPinned) hideTermTip();
+  });
+  document.addEventListener("click", (event) => {
+    const btn = event.target.closest?.(".term");
+    if (btn) {
+      if (termPinned && termOpen === btn) { hideTermTip(); return; }
+      showTermTip(btn);
+      termPinned = true;
+    } else {
+      hideTermTip();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && termOpen) hideTermTip();
+  });
+  // position: fixed would leave it behind as the page scrolls.
+  window.addEventListener("scroll", hideTermTip, { passive: true });
+  window.addEventListener("resize", hideTermTip);
 
   // --- Table view -------------------------------------------------------------------
   const tableView = document.getElementById("table-view");
@@ -661,7 +761,7 @@ function init(topo, meta, data) {
       th.setAttribute("aria-sort", k === key ? (dir > 0 ? "ascending" : "descending") : "none");
     });
     document.getElementById("table-caption").textContent =
-      `${layer.title}, ${metaOf(layer.id)?.legend_period ?? ""}, by county`;
+      `${plainText(layer.title)}, ${metaOf(layer.id)?.legend_period ?? ""}, by county`;
     const withData = rows.filter((r) => r.value != null).length;
     document.getElementById("table-count").textContent =
       `${rows.length.toLocaleString("en-US")} counties shown, ${withData.toLocaleString("en-US")} with data`;
@@ -720,7 +820,7 @@ function init(topo, meta, data) {
     // to both the map and its legend swatch) lets the counties with data lead.
     mapCard.classList.toggle("na-quiet", layer.id === "cfpb_delinquency_z");
 
-    document.getElementById("layer-title").textContent = layer.title;
+    setTermText(document.getElementById("layer-title"), layer.title);
     const ids = Object.keys(data[fileOf(layer.id)] ?? {});
     const withData = ids.filter((f) => valueOf(layer.id, f) != null).length;
     document.getElementById("layer-sub").textContent =
@@ -729,6 +829,7 @@ function init(topo, meta, data) {
     renderPanel();
     renderTable();
     hideTip();
+    hideTermTip();
   }
 
   // Sources line, from meta.json.
