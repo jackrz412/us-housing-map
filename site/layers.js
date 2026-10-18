@@ -67,7 +67,7 @@ const BIVARIATE_LEVELS = ["below", "near", "above"];
 const bivariateClass = (v) => BIVARIATE_BREAKS.filter((b) => v >= b).length;
 
 // --- Map layers, grouped by role --------------------------------------------------
-// `title` and `unit` may mark glossary terms as [[key|shown text]] (GLOSSARY
+// `title`, `unit`, `panelName` and panel `name` may mark glossary terms as [[key|shown text]] (GLOSSARY
 // below); the page shows those as small definition tooltips. Use plainText()
 // wherever the text is needed without them.
 // `name` is the short switcher label. `panelName` is used in the click panel
@@ -91,7 +91,7 @@ const MAP_LAYERS = [
     id: "cfpb_delinquency_z",
     role: "outcome",
     name: "Delinquency vs baseline",
-    panelName: "Delinquency vs own 2017–2019 average",
+    panelName: "[[delinquency|Delinquency]] vs own 2017–2019 average",
     title: "[[delinquency|90+ day mortgage delinquency]] compared with each county's 2017–2019 normal",
     scale: "diverging",
     breaks: [-2, -1, -0.5, 0.5, 1, 2],
@@ -107,7 +107,7 @@ const MAP_LAYERS = [
     id: "acs_cost_burden",
     role: "burden",
     name: "Owner cost burden",
-    panelName: "Mortgaged owners paying 30%+",
+    panelName: "Mortgaged owners [[cost_burden|paying 30%+]]",
     title: "Share of mortgaged owners [[cost_burden|paying 30% or more of income on housing]]",
     scale: "diverging",
     // Neutral class 25–30% contains the US share (28.1%).
@@ -123,7 +123,7 @@ const MAP_LAYERS = [
     id: "hmda_dti_over_43",
     role: "burden",
     name: "High-DTI loans",
-    panelName: "2025 loans with DTI above 43%",
+    panelName: "2025 loans with [[dti|DTI]] above [[qm|43%]]",
     title: "Share of 2025 home-purchase loans with [[dti|debt-to-income]] above 43%",
     scale: "sequential",
     breaks: [20, 30, 40, 50],
@@ -135,7 +135,7 @@ const MAP_LAYERS = [
     id: "acs_property_tax_income",
     role: "burden",
     name: "Property tax burden",
-    panelName: "Median property tax as % of owner income",
+    panelName: "Median property tax as % of owner income ([[ratio_of_medians|ratio of medians]])",
     title: "Median property tax as a share of median owner income ([[ratio_of_medians|ratio of medians]])",
     scale: "sequential",
     breaks: [1, 1.5, 2, 2.5, 3, 4],
@@ -147,7 +147,7 @@ const MAP_LAYERS = [
     id: "hmda_cltv_over_90",
     role: "equity",
     name: "High-CLTV loans",
-    panelName: "2025 conventional loans with CLTV above 90%",
+    panelName: "2025 [[conventional|conventional]] loans with [[cltv|CLTV]] above 90%",
     title: "Share of 2025 [[conventional|conventional]] purchase loans with [[cltv|combined loan-to-value (CLTV)]] above 90%",
     scale: "sequential",
     // Conventional loans only (DECISIONS 019). 30% is about the national share.
@@ -162,7 +162,7 @@ const MAP_LAYERS = [
     file: "burden", field: "burden",
     flags: ["fewer_than_3_components"],
     name: "Burden score",
-    panelName: "Burden score (1.0 = 2019 benchmark)",
+    panelName: "[[burden_score|Burden score]] (1.0 = [[benchmark|2019 benchmark]])",
     title: "[[burden_score|Burden score]]: [[pti|payment burden]], [[dti|high-DTI lending]], [[dti_denials|DTI denials]] and [[cost_burden|owner cost burden]] vs 2019",
     scale: "diverging",
     breaks: INDEX_BREAKS,
@@ -177,7 +177,7 @@ const MAP_LAYERS = [
     role: "index",
     file: "equity", field: "equity",
     name: "Equity score",
-    panelName: "Equity score (1.0 = 2019 benchmark)",
+    panelName: "[[equity_score|Equity score]] (1.0 = [[benchmark|2019 benchmark]])",
     title: "[[equity_score|Equity score]]: share of [[conventional|conventional]] loans above 90% [[cltv|CLTV]] vs 2019",
     scale: "diverging",
     breaks: INDEX_BREAKS,
@@ -218,15 +218,15 @@ const PANEL = [
     role: "outcome", label: "Outcome",
     rows: [
       { id: "cfpb_delinquency_z", layer: true },
-      { id: "cfpb_delinquency_90", name: "Mortgages 90+ days delinquent", format: fmt.pct1 },
-      { id: "cfpb_delinquency_change", name: "Change vs 2017–2019 average", format: fmt.pts },
+      { id: "cfpb_delinquency_90", name: "Mortgages [[delinquency|90+ days delinquent]]", format: fmt.pct1 },
+      { id: "cfpb_delinquency_change", name: "Change vs 2017–2019 average ([[pp|points]])", format: fmt.pts },
     ],
   },
   {
     role: "burden", label: "Burden",
     rows: [
       { id: "acs_cost_burden", layer: true },
-      { id: "acs_cost_burden_severe", name: "Mortgaged owners paying 50%+", format: fmt.pct1 },
+      { id: "acs_cost_burden_severe", name: "Mortgaged owners [[cost_burden|paying 50%+]]", format: fmt.pct1 },
       { id: "hmda_dti_over_43", layer: true },
       { id: "acs_property_tax_income", layer: true },
     ],
@@ -237,7 +237,7 @@ const PANEL = [
       { id: "hmda_cltv_over_90", layer: true },
       // Excluded from the layer because they're above 90% by design; shown
       // here so that thin equity isn't hidden.
-      { id: "hmda_govt_share", name: "2025 loans that are FHA, VA or USDA", format: fmt.pct1 },
+      { id: "hmda_govt_share", name: "2025 loans that are [[govt|FHA, VA or USDA]]", format: fmt.pct1 },
     ],
   },
   {
@@ -246,23 +246,23 @@ const PANEL = [
     rows: [
       { id: "index_burden", layer: true },
       { id: "index_pti", file: "burden", field: "pti", x: "x_pti", flags: ["pti_rules_over_10pct"],
-        name: "PTI: median payment on 2025 loans, % of income", format: fmt.pti },
+        name: "[[pti|PTI]]: median [[pi|payment]] on 2025 loans, % of income", format: fmt.pti },
       { id: "index_d", file: "burden", field: "d", x: "x_d",
-        name: "D: 2025 loans with DTI above 43%", format: fmt.pct1 },
+        name: "D: 2025 loans with [[dti|DTI]] above [[qm|43%]]", format: fmt.pct1 },
       { id: "index_r", file: "burden", field: "r", x: "x_r",
-        name: "R: applications denied for DTI", format: fmt.pct1 },
+        name: "R: applications [[dti_denials|denied for DTI]]", format: fmt.pct1 },
       { id: "index_s", file: "burden", field: "s", x: "x_s",
-        name: "S: mortgaged owners paying 30%+", format: fmt.pct1 },
+        name: "S: mortgaged owners [[cost_burden|paying 30%+]]", format: fmt.pct1 },
       { id: "index_equity", layer: true },
       { id: "index_cltv", file: "equity", field: "cltv", x: "x_cltv",
-        name: "CLTV: conventional loans above 90%", format: fmt.pct1 },
+        name: "[[cltv|CLTV]]: [[conventional|conventional]] loans above 90%", format: fmt.pct1 },
       { id: "index_bivariate", layer: true },
     ],
   },
   {
     role: "context", label: "Context",
     rows: [
-      { id: "income", name: "Median household income", format: fmt.usd },
+      { id: "income", name: "[[median|Median]] household income", format: fmt.usd },
       { id: "hmda_rate", name: "Median rate on 2025 loans", format: fmt.rate },
       { id: "hmda_loan_amount", name: "Median amount of 2025 loans", format: fmt.usd },
       { id: "hmda_loans", name: "2025 home-purchase loans", format: fmt.count },
@@ -271,11 +271,12 @@ const PANEL = [
   },
 ];
 
-// Wording for per-county caveats recorded in meta.json -> flags.
+// Wording for per-county caveats recorded in meta.json -> flags. May mark
+// glossary terms, shown as tooltips in the click panel.
 const FLAG_TEXT = {
-  low_reliability: "Low reliability: small survey sample",
-  topcoded: "Lower bound: taxes top-coded at $10,000+",
-  sd_floored: "Very stable baseline: SD floored at 0.2 pts, so this is conservative",
+  low_reliability: "[[low_reliability|Low reliability]]: small survey sample",
+  topcoded: "Lower bound: taxes [[topcoded|top-coded]] at $10,000+",
+  sd_floored: "Very stable baseline: [[sd|SD]] floored at 0.2 pts, so this is conservative",
   fewer_than_3_components: "Rests on fewer than 3 of its 4 inputs",
   pti_rules_over_10pct: "Over 10% of this county's loans fail the PTI loan rules",
 };
@@ -300,7 +301,7 @@ const GLOSSARY = {
   },
   cost_burden: {
     term: "Owner cost burden",
-    def: "Monthly owner costs (mortgage, property tax, insurance, utilities, HOA fees) as a share of household income. 30% or more counts as cost-burdened.",
+    def: "Monthly owner costs (mortgage, property tax, insurance, utilities, HOA fees) as a share of household income. 30% or more counts as cost-burdened; 50% or more, severely.",
     example: "$2,100 costs ÷ $6,000 monthly income = 35% → cost-burdened",
   },
   dti: {
@@ -348,8 +349,55 @@ const GLOSSARY = {
     def: "The share of conventional loans above 90% CLTV, divided by the 2019 national share (36.03%). Higher means more recent buyers with thin equity.",
     example: "45% of loans above 90% CLTV → 45 ÷ 36.03 = 1.25×",
   },
+  pp: {
+    term: "Percentage points (pts)",
+    def: "The plain difference between two percentages. It isn't the same as a percent change.",
+    example: "1.0% → 1.5% is 1.5 − 1.0 = +0.5 pts, but a (1.5 − 1.0) ÷ 1.0 = 50% increase",
+  },
+  median: {
+    term: "Median",
+    def: "The middle value once all values are sorted: half are above it, half below. Unlike an average, a few very large values don't pull it up.",
+    example: "$40k, $55k, $60k, $70k, $400k → median $60k (average $125k)",
+  },
+  govt: {
+    term: "Government-backed loans (FHA, VA, USDA)",
+    def: "Mortgages insured or guaranteed by the Federal Housing Administration, Veterans Affairs or the Department of Agriculture. They allow 0–3.5% down, so most start above 90% CLTV.",
+    example: "FHA: $400,000 home, 3.5% down → $386,000 loan, 96.5% LTV",
+  },
+  qm: {
+    term: "43% DTI (old Qualified Mortgage cap)",
+    def: "Until 2021, a loan generally needed DTI of 43% or less to count as a Qualified Mortgage, which gives lenders legal protection. The rule is now price-based, and FHA and VA often go higher, so 43% is a historical yardstick.",
+    example: "$3,000 debts ÷ $7,000 income = 42.9%, under; $3,050 ÷ $7,000 = 43.6%, over",
+  },
+  pi: {
+    term: "Principal and interest (P&I)",
+    def: "The fixed monthly loan payment: interest on the balance plus enough principal to pay the loan off over its term. PTI adds property tax and insurance on top.",
+    example: "$300,000 at 6.5% over 30 years → $1,896 a month",
+  },
+  x: {
+    term: "x: value ÷ benchmark",
+    def: "Each index input divided by its fixed 2019 national value, so 1.00× is the 2019 level. The Burden and Equity scores are built from these.",
+    example: "R: 5.1% ÷ 4.10% = 1.24×",
+  },
+  low_reliability: {
+    term: "Low reliability",
+    def: "The Census survey reached few households here, so the margin of error is large next to the estimate (coefficient of variation above 40%). The value is shown, but read it loosely.",
+    example: "20% ± 15 pts → error 15 ÷ 1.645 = 9.1; 9.1 ÷ 20 = 46%, above 40%",
+  },
+  topcoded: {
+    term: "Top-coded",
+    def: "The Census reports any median property tax of $10,000 or more as \"$10,000+\", so the true value is higher and the ratio is a minimum.",
+    example: "$10,000+ tax ÷ $95,000 income → at least 10.5%",
+  },
+  acs5: {
+    term: "ACS 5-year estimate",
+    def: "The Census American Community Survey pools five years of responses so that small counties have enough households. The value describes the whole period, not its last year.",
+    example: "2020–2024 5-year: answers from 2020 through 2024 combined, centered on 2022",
+  },
 };
 
-// Glossary markup: [[key|shown text]].
+// Glossary markup: [[key|shown text]]. ACS periods in legend captions get
+// their term from markPeriods().
 const TERM_MARKUP = /\[\[(\w+)\|([^\]]+)\]\]/g;
 const plainText = (s) => s.replace(TERM_MARKUP, "$2");
+const markPeriods = (s) => s.replace(/ACS \d{4}–\d{4} 5-year/g, "[[acs5|$&]]");
