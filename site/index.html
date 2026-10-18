@@ -269,6 +269,26 @@
     .tooltip .where { color: var(--ink-2); }
     .tooltip .flag { margin-top: 4px; font-size: 12px; color: var(--ink-2); }
 
+    /* Glossary terms in the layer title and legend caption (layers.js
+       GLOSSARY): a quiet dotted underline, and a small definition card. */
+    .term {
+      font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0;
+      cursor: help; text-align: inherit;
+      text-decoration: underline dotted; text-decoration-color: var(--muted);
+      text-decoration-thickness: 1px; text-underline-offset: 3px;
+    }
+    .term:hover, .term[aria-describedby] { text-decoration-color: currentColor; }
+    .term-tip {
+      position: fixed; top: 0; left: 0; z-index: 11; pointer-events: none; max-width: min(280px, calc(100vw - 16px));
+      background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+      border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+      padding: 8px 10px; font-size: 12px; line-height: 1.45; font-weight: 400;
+    }
+    .term-tip[hidden] { display: none; }
+    .term-tip .tt-term { font-weight: 600; margin-bottom: 2px; }
+    .term-tip .tt-example { margin-top: 6px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+    .term-tip .tt-example span { font-weight: 600; }
+
     /* Table view */
     details.table-view { margin-top: 16px; }
     details.table-view > summary { cursor: pointer; font-weight: 600; font-size: 15px; }
@@ -325,14 +345,14 @@
       <section class="card" id="map-card" aria-labelledby="layer-title">
         <p class="layer-title" id="layer-title">Loading…</p>
         <p class="layer-sub" id="layer-sub"></p>
-        <div class="legend" id="legend" aria-hidden="true">
+        <div class="legend" id="legend">
           <div class="legend-main">
-            <div class="ramp" id="ramp">
+            <div class="ramp" id="ramp" aria-hidden="true">
               <div class="swatches" id="swatches"></div>
               <div class="ticks" id="ticks"></div>
               <div class="ends" id="ends"></div>
             </div>
-            <div class="bivariate-key" id="bivariate-key" hidden>
+            <div class="bivariate-key" id="bivariate-key" aria-hidden="true" hidden>
               <div class="bk-grid" id="bk-grid"></div>
               <div class="bk-text">
                 <p>Burden score ▶ across: below 0.9, 0.9–1.1, above 1.1</p>
@@ -342,7 +362,7 @@
             </div>
             <div class="legend-unit" id="legend-unit"></div>
           </div>
-          <div class="na-key">
+          <div class="na-key" aria-hidden="true">
             <svg width="16" height="12"><defs><pattern id="na-hatch-legend" patternUnits="userSpaceOnUse" width="4" height="4" patternTransform="rotate(45)"><rect width="4" height="4" style="fill: var(--na-fill)"/><line x1="0" y1="0" x2="0" y2="4" style="stroke: var(--na-line); stroke-width: 1.5"/></pattern></defs><rect width="16" height="12" fill="url(#na-hatch-legend)"/></svg>
             Data not available
           </div>
@@ -402,6 +422,7 @@
   </main>
 
   <div class="tooltip" id="tooltip" aria-hidden="true"></div>
+  <div class="term-tip" id="term-tip" role="tooltip" hidden></div>
 
   <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
