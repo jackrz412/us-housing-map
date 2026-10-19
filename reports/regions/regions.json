@@ -1,0 +1,540 @@
+{
+  "meta": {
+    "household_period": "ACS 2020\u20132024 5-year",
+    "household_source": "https://www2.census.gov/programs-surveys/acs/summary_file/2024/table-based-SF/data/5YRData/acsdt5y2024-b11001.dat",
+    "inputs": {
+      "acs_cost_burden": {
+        "legend_period": "ACS 2020\u20132024 5-year",
+        "run_date": "2026-10-12"
+      },
+      "acs_property_tax_income": {
+        "legend_period": "ACS 2020\u20132024 5-year",
+        "run_date": "2026-10-12"
+      },
+      "burden": {
+        "legend_period": "HMDA 2025 \u00b7 ACS 2020\u20132024 5-year \u00b7 FIO 2022",
+        "run_date": "2026-10-16"
+      },
+      "equity": {
+        "legend_period": "HMDA 2025 \u00b7 ACS 2020\u20132024 5-year \u00b7 FIO 2022",
+        "run_date": "2026-10-16"
+      },
+      "hmda_cltv_over_90": {
+        "legend_period": "HMDA 2025",
+        "run_date": "2026-10-12"
+      }
+    },
+    "run_date": "2026-10-16"
+  },
+  "method": "Regional and coastal-metro comparison of current conditions (descriptive only).\n\nFor each area: the household-weighted median of county values for owner cost\nburden (share of mortgaged owners paying 30%+), new-buyer PTI, the high-CLTV\nshare (conventional loans), property tax % of owner income, and the Burden and\nEquity scores. Inputs are the same processed files the map uses, so the\nnumbers describe the live layers.\n\nMethod:\n  - weight = total households (ACS B11001_E001, same 5-year vintage as the\n    ACS layers);\n  - weighted median = the first county value, in sorted order, at which the\n    cumulative weight reaches half the total weight of counties with a value;\n  - a county without a value for a measure is left out of that measure (the\n    output records the share of households covered);\n  - metros are the county containing the principal city (New York: all five\n    boroughs), not the full metro area.",
+  "metros": {
+    "Boston (Suffolk Co.)": {
+      "counties": 1,
+      "households": 327167,
+      "measures": {
+        "burden": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 1.0552
+        },
+        "cltv90": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 21.4
+        },
+        "cost_burden": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 33.0
+        },
+        "equity": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 0.5953
+        },
+        "prop_tax": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 3.13
+        },
+        "pti": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 0.2849
+        }
+      }
+    },
+    "Denver (Denver Co.)": {
+      "counties": 1,
+      "households": 335428,
+      "measures": {
+        "burden": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 0.9627
+        },
+        "cltv90": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 24.6
+        },
+        "cost_burden": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 28.1
+        },
+        "equity": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 0.6828
+        },
+        "prop_tax": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 2.09
+        },
+        "pti": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 0.2811
+        }
+      }
+    },
+    "Los Angeles (LA Co.)": {
+      "counties": 1,
+      "households": 3416449,
+      "measures": {
+        "burden": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 1.4226
+        },
+        "cltv90": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 15.1
+        },
+        "cost_burden": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 43.0
+        },
+        "equity": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 0.4205
+        },
+        "prop_tax": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 4.45
+        },
+        "pti": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 0.2985
+        }
+      }
+    },
+    "New York (5 boroughs)": {
+      "counties": 5,
+      "households": 3334088,
+      "measures": {
+        "burden": {
+          "counties": 5,
+          "household_coverage": 1.0,
+          "median": 1.3202
+        },
+        "cltv90": {
+          "counties": 5,
+          "household_coverage": 1.0,
+          "median": 4.3
+        },
+        "cost_burden": {
+          "counties": 5,
+          "household_coverage": 1.0,
+          "median": 46.1
+        },
+        "equity": {
+          "counties": 5,
+          "household_coverage": 1.0,
+          "median": 0.1196
+        },
+        "prop_tax": {
+          "counties": 5,
+          "household_coverage": 1.0,
+          "median": 5.2
+        },
+        "pti": {
+          "counties": 5,
+          "household_coverage": 1.0,
+          "median": 0.286
+        }
+      }
+    },
+    "San Francisco (SF Co.)": {
+      "counties": 1,
+      "households": 363970,
+      "measures": {
+        "burden": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 1.051
+        },
+        "cltv90": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 5.4
+        },
+        "cost_burden": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 36.4
+        },
+        "equity": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 0.1504
+        },
+        "prop_tax": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 5.17
+        },
+        "pti": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 0.2741
+        }
+      }
+    },
+    "Seattle (King Co.)": {
+      "counties": 1,
+      "households": 941054,
+      "measures": {
+        "burden": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 0.9835
+        },
+        "cltv90": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 13.1
+        },
+        "cost_burden": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 28.2
+        },
+        "equity": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 0.3647
+        },
+        "prop_tax": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 4.28
+        },
+        "pti": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 0.295
+        }
+      }
+    },
+    "Washington DC": {
+      "counties": 1,
+      "households": 324491,
+      "measures": {
+        "burden": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 0.8601
+        },
+        "cltv90": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 25.5
+        },
+        "cost_burden": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 25.2
+        },
+        "equity": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 0.7077
+        },
+        "prop_tax": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 2.47
+        },
+        "pti": {
+          "counties": 1,
+          "household_coverage": 1.0,
+          "median": 0.2553
+        }
+      }
+    }
+  },
+  "pooled": {
+    "Northeast + South Atlantic": {
+      "counties": 806,
+      "households": 49003570,
+      "measures": {
+        "burden": {
+          "counties": 795,
+          "household_coverage": 0.9996815946266772,
+          "median": 1.0684
+        },
+        "cltv90": {
+          "counties": 691,
+          "household_coverage": 0.9906462325091825,
+          "median": 29.6
+        },
+        "cost_burden": {
+          "counties": 806,
+          "household_coverage": 1.0,
+          "median": 28.4
+        },
+        "equity": {
+          "counties": 691,
+          "household_coverage": 0.9906462325091825,
+          "median": 0.8207
+        },
+        "prop_tax": {
+          "counties": 805,
+          "household_coverage": 0.9999782260761818,
+          "median": 3.31
+        },
+        "pti": {
+          "counties": 733,
+          "household_coverage": 0.9591438133997177,
+          "median": 0.2776
+        }
+      }
+    },
+    "Pacific + Mountain": {
+      "counties": 414,
+      "households": 28141643,
+      "measures": {
+        "burden": {
+          "counties": 363,
+          "household_coverage": 0.9982664835880407,
+          "median": 1.2004
+        },
+        "cltv90": {
+          "counties": 310,
+          "household_coverage": 0.9927600886700183,
+          "median": 23.5
+        },
+        "cost_burden": {
+          "counties": 413,
+          "household_coverage": 0.9999898371250037,
+          "median": 33.2
+        },
+        "equity": {
+          "counties": 310,
+          "household_coverage": 0.9927600886700183,
+          "median": 0.6531
+        },
+        "prop_tax": {
+          "counties": 414,
+          "household_coverage": 1.0,
+          "median": 3.53
+        },
+        "pti": {
+          "counties": 348,
+          "household_coverage": 0.9962861443448771,
+          "median": 0.2915
+        }
+      }
+    }
+  },
+  "regions": {
+    "Midwest": {
+      "counties": 1055,
+      "households": 27971901,
+      "measures": {
+        "burden": {
+          "counties": 903,
+          "household_coverage": 0.9934443497422646,
+          "median": 0.8944
+        },
+        "cltv90": {
+          "counties": 756,
+          "household_coverage": 0.9775482903360769,
+          "median": 38.5
+        },
+        "cost_burden": {
+          "counties": 1053,
+          "household_coverage": 0.9999752251375407,
+          "median": 22.4
+        },
+        "equity": {
+          "counties": 756,
+          "household_coverage": 0.9775482903360769,
+          "median": 1.0694
+        },
+        "prop_tax": {
+          "counties": 1055,
+          "household_coverage": 1.0,
+          "median": 3.27
+        },
+        "pti": {
+          "counties": 841,
+          "household_coverage": 0.9881865018755787,
+          "median": 0.2585
+        }
+      }
+    },
+    "Mountain": {
+      "counties": 281,
+      "households": 9810310,
+      "measures": {
+        "burden": {
+          "counties": 235,
+          "household_coverage": 0.9954386762497821,
+          "median": 1.0679
+        },
+        "cltv90": {
+          "counties": 189,
+          "household_coverage": 0.9815139378877935,
+          "median": 26.2
+        },
+        "cost_burden": {
+          "counties": 280,
+          "household_coverage": 0.99997084699668,
+          "median": 27.9
+        },
+        "equity": {
+          "counties": 189,
+          "household_coverage": 0.9815139378877935,
+          "median": 0.7269
+        },
+        "prop_tax": {
+          "counties": 281,
+          "household_coverage": 1.0,
+          "median": 2.1
+        },
+        "pti": {
+          "counties": 221,
+          "household_coverage": 0.9898630114644695,
+          "median": 0.2812
+        }
+      }
+    },
+    "Northeast": {
+      "counties": 218,
+      "households": 22592216,
+      "measures": {
+        "burden": {
+          "counties": 216,
+          "household_coverage": 0.9998169280959425,
+          "median": 1.0399
+        },
+        "cltv90": {
+          "counties": 214,
+          "household_coverage": 0.9995790585571597,
+          "median": 23.8
+        },
+        "cost_burden": {
+          "counties": 218,
+          "household_coverage": 1.0,
+          "median": 29.2
+        },
+        "equity": {
+          "counties": 214,
+          "household_coverage": 0.9995790585571597,
+          "median": 0.6619
+        },
+        "prop_tax": {
+          "counties": 218,
+          "household_coverage": 1.0,
+          "median": 5.07
+        },
+        "pti": {
+          "counties": 214,
+          "household_coverage": 0.9994715436502555,
+          "median": 0.286
+        }
+      }
+    },
+    "Pacific (CA, OR, WA)": {
+      "counties": 133,
+      "households": 18331333,
+      "measures": {
+        "burden": {
+          "counties": 128,
+          "household_coverage": 0.999779830522963,
+          "median": 1.2598
+        },
+        "cltv90": {
+          "counties": 121,
+          "household_coverage": 0.9987786485576362,
+          "median": 15.4
+        },
+        "cost_burden": {
+          "counties": 133,
+          "household_coverage": 1.0,
+          "median": 36.7
+        },
+        "equity": {
+          "counties": 121,
+          "household_coverage": 0.9987786485576362,
+          "median": 0.4283
+        },
+        "prop_tax": {
+          "counties": 133,
+          "household_coverage": 1.0,
+          "median": 4.18
+        },
+        "pti": {
+          "counties": 127,
+          "household_coverage": 0.9997235880227586,
+          "median": 0.295
+        }
+      }
+    },
+    "South Atlantic": {
+      "counties": 588,
+      "households": 26411354,
+      "measures": {
+        "burden": {
+          "counties": 579,
+          "household_coverage": 0.9995658306650995,
+          "median": 1.1118
+        },
+        "cltv90": {
+          "counties": 477,
+          "household_coverage": 0.9830051121195831,
+          "median": 30.8
+        },
+        "cost_burden": {
+          "counties": 588,
+          "household_coverage": 1.0,
+          "median": 27.6
+        },
+        "equity": {
+          "counties": 477,
+          "household_coverage": 0.9830051121195831,
+          "median": 0.856
+        },
+        "prop_tax": {
+          "counties": 587,
+          "household_coverage": 0.9999596007080894,
+          "median": 2.55
+        },
+        "pti": {
+          "counties": 519,
+          "household_coverage": 0.9246475587733972,
+          "median": 0.2714
+        }
+      }
+    }
+  }
+}

@@ -104,6 +104,14 @@ So most of the variation in the outcome is counties falling back from their 2017
 - **Lower income alone (+0.27) beats Burden** and every Burden input. D, R and CLTV may partly be standing in for income here; this test can't separate them.
 - Per SPEC, none of this changes the weights or benchmarks. Seeing which components "worked" and re-weighting toward them would be tuning on the test.
 
+### Exploratory observations (post hoc, not tested)
+
+*Noted after seeing the secondary result. Nothing in this subsection was pre-specified or tested; it describes the table above and is not a finding.*
+
+- **The components split by sign.** Equity (CLTV, +0.34), lower income (+0.27), R (+0.23) and D (+0.13) point the expected way. PTI (−0.12) and S, the owner cost share (−0.14), point the other way.
+- Seven measures were examined, and the CIs aren't adjusted for that. With pre-pandemic levels held fixed, the split may reflect what each measure stands in for (income, leverage, housing costs) as much as what it measures.
+- **The index is unchanged.** Re-weighting toward the measures that did well here would be tuning on the test. Any revised index gets its own pre-registered test on data not yet released (DECISIONS 032).
+
 ## What the evidence does and doesn't support
 
 **Supports:**

@@ -233,3 +233,9 @@ Each entry: the decision, the alternatives, and why. Newest at the bottom.
 - **Over:** quantile classes (DECISIONS 011: fixed breaks keep a class's meaning across years); published bivariate schemes (Stevens pink–cyan and teal–red failed the colorblind floor on adjacent cells: worst ΔE 3.0 and 5.8).
 - **Why:** fixed, benchmark-anchored classes keep the index's meaning stable as data updates, and the bivariate grid must stay readable for colorblind viewers without relying on a table.
 - **Cost accepted:** most current counties score above 1.0 on Burden (2025 vs 2019 benchmarks), so the map leans red. That's the point of fixed benchmarks, not a palette problem. The bivariate palette is new, not a recognised standard.
+
+## 032 — The index stays as specified; any revision gets its own pre-registered test on unreleased data (2026-10-19)
+- **Chose:** keep the Burden and Equity definitions, weights and benchmarks unchanged. The sign split in the secondary analysis (Equity, income, D and R expected; PTI and S opposite) is recorded in BACKTEST.md as a post hoc observation, not a result. If a revised index is ever proposed, its definition and test are written down and committed before the outcome data it's tested on is released (e.g. CFPB delinquency months after the current file's last month, 2025-12).
+- **Over:** re-weighting toward the components that scored well, or dropping PTI and S, on the strength of the 2023–2025 results.
+- **Why:** those results are the test data. A revision chosen by looking at them would pass that test by construction, so only a test on data nobody has seen can show whether it works.
+- **Cost accepted:** the published Burden score keeps two components whose secondary-analysis sign was opposite to the expected one.
