@@ -18,6 +18,8 @@ into the portfolio (src/assets/housing/).
 """
 import argparse
 import json
+import textwrap
+from decimal import ROUND_HALF_UP, Decimal
 from html import escape
 from pathlib import Path
 
@@ -103,11 +105,28 @@ PANELS = [
 SCALE_MAX = 50  # percent; both panels share one 0-50% scale, so lengths compare
 
 
-def panel(x0, y0, width, title, color_var, values, labels_left, label_w, stagger0):
-    """One bar panel: title, rows of bars with value labels, faint 10% gridlines."""
+def pct(v):
+    """Whole percent, rounding halves up like the page copy (38.5 -> 39%).
+
+    Python's own formatting rounds halves to even (38.5 -> 38), which would
+    disagree with the text.
+    """
+    return f"{Decimal(str(v)).quantize(Decimal('1'), rounding=ROUND_HALF_UP)}%"
+
+
+# Average glyph width of 15px semibold Plex Sans, for wrapping titles without a
+# text-measuring dependency (slightly generous, so lines never overrun).
+TITLE_CHAR_W = 8.4
+
+
+def panel(x0, y0, width, title, color_var, values, labels_left, label_w, stagger0,
+          title_x=None):
+    """One bar panel: title (wrapped to fit), rows of bars with value labels, faint 10% gridlines."""
     row_h, bar_h = 34, 16
-    out = [text(x0 + (label_w if labels_left else 0), y0 + FONT_MD, title, "fig-title", size=FONT_MD)]
-    top = y0 + FONT_MD + 16
+    tx = x0 + (label_w if labels_left else 0) if title_x is None else title_x
+    lines = textwrap.wrap(title, int((x0 + width - tx) / TITLE_CHAR_W), break_on_hyphens=False)
+    out = [text(tx, y0 + FONT_MD + i * 20, line, "fig-title", size=FONT_MD) for i, line in enumerate(lines)]
+    top = y0 + FONT_MD + 20 * (len(lines) - 1) + 16
     bx = x0 + (label_w if labels_left else 0)
     bw = width - (label_w if labels_left else 0) - 44  # room for the value label
     scale = lambda v: bw * v / SCALE_MAX  # noqa: E731
@@ -115,14 +134,14 @@ def panel(x0, y0, width, title, color_var, values, labels_left, label_w, stagger
     for t in range(0, SCALE_MAX + 1, 10):
         gx = bx + scale(t)
         out.append(f'<line x1="{gx:.1f}" y1="{top - 4}" x2="{gx:.1f}" y2="{bottom}" class="fig-grid"/>')
-        if t % 20 == 0 or t == SCALE_MAX:
+        if t % 20 == 0:
             out.append(text(gx, bottom + 16, f"{t}%", "fig-muted", "middle"))
     for i, (label, v) in enumerate(values):
         y = top + i * row_h
         if labels_left:
             out.append(text(x0 + label_w - 12, y + row_h / 2 + 4.5, label, anchor="end"))
         out.append(bar(bx, y + (row_h - bar_h) / 2, scale(v), bar_h, color_var, stagger0 + i))
-        out.append(text(bx + scale(v) + 6, y + row_h / 2 + 4.5, f"{v:.0f}%", halo=True))
+        out.append(text(bx + scale(v) + 6, y + row_h / 2 + 4.5, pct(v), halo=True))
     return "\n".join(out), bottom + 16
 
 
@@ -130,9 +149,9 @@ def regions_svg(width):
     rows = regions_data()
     title = "Different regions are stretched in different ways."
     desc = ("Bar chart by region. The Pacific coast has the highest share of mortgaged owners "
-            f"paying 30% or more of income ({rows[0][1]:.0f}%) and the lowest share of 2025 "
-            f"conventional loans above 90% loan-to-value ({rows[0][2]:.0f}%). The Midwest is the "
-            f"reverse: {rows[4][1]:.0f}% and {rows[4][2]:.0f}%. Mountain, Northeast and South "
+            f"paying 30% or more of income ({pct(rows[0][1])}) and the lowest share of 2025 "
+            f"conventional loans above 90% loan-to-value ({pct(rows[0][2])}). The Midwest is the "
+            f"reverse: {pct(rows[4][1])} and {pct(rows[4][2])}. Mountain, Northeast and South "
             "Atlantic sit in between on both.")
     parts = []
     if width >= 600:
@@ -149,9 +168,9 @@ def regions_svg(width):
         # Stacked, each panel with its own region labels.
         label_w = 112
         a, ha = panel(0, 0, width, PANELS[0][0], PANELS[0][1], [(r[0], r[1]) for r in rows],
-                      True, label_w, 0)
+                      True, label_w, 0, title_x=0)
         b, hb = panel(0, ha + 24, width, PANELS[1][0], PANELS[1][1], [(r[0], r[2]) for r in rows],
-                      True, label_w, len(rows))
+                      True, label_w, len(rows), title_x=0)
         parts, height = [a, b], hb + 8
     return svg(f"regions-{'wide' if width >= 600 else 'narrow'}", width, round(height), title, desc,
                "\n".join(parts))
@@ -180,18 +199,25 @@ def secondary_svg(width):
             f"new buyers' payment-to-income ({by['pti'][2]:+.2f}) and owners paying 30%+ of income "
             f"({by['s'][2]:+.2f}) are negative.")
     wide = width >= 600
-    label_w = 262 if wide else 0
+    label_w = 300 if wide else 0
     row_h = 36 if wide else 52
+    # Phones: labels sit above each row, so the plot spans the width, with room at the left
+    # for the value label of the most negative row.
+    pad_l = 0 if wide else 44
     pad_r = 16
-    plot_x, plot_w = label_w, width - label_w - pad_r
+    plot_x, plot_w = label_w + pad_l, width - label_w - pad_l - pad_r
     sx = lambda v: plot_x + plot_w * (v - X_MIN) / (X_MAX - X_MIN)  # noqa: E731
     top = 8
     bottom = top + row_h * len(rows)
     out = []
-    # Faint gridlines, then the zero line on top of them.
-    for t in (-0.2, -0.1, 0.1, 0.2, 0.3, 0.4):
-        out.append(f'<line x1="{sx(t):.1f}" y1="{top}" x2="{sx(t):.1f}" y2="{bottom}" class="fig-grid"/>')
-    out.append(f'<line x1="{sx(0):.1f}" y1="{top - 4}" x2="{sx(0):.1f}" y2="{bottom}" class="fig-zero"/>')
+    # Faint gridlines, then the zero line on top of them. On phones they're drawn per row,
+    # over the dot band only, so they never run through a row label.
+    spans = ([(top - 4, bottom)] if wide else
+             [(top + i * row_h + 20, top + i * row_h + row_h) for i in range(len(rows))])
+    for y1, y2 in spans:
+        for t in (-0.2, -0.1, 0.1, 0.2, 0.3, 0.4):
+            out.append(f'<line x1="{sx(t):.1f}" y1="{y1}" x2="{sx(t):.1f}" y2="{y2}" class="fig-grid"/>')
+        out.append(f'<line x1="{sx(0):.1f}" y1="{y1}" x2="{sx(0):.1f}" y2="{y2}" class="fig-zero"/>')
     for t in (-0.2, 0, 0.2, 0.4):
         out.append(text(sx(t), bottom + 16, f"{t:+.1f}" if t else "0", "fig-muted", "middle"))
     out.append(text(plot_x + plot_w / 2, bottom + AXIS_TITLE_GAP,
