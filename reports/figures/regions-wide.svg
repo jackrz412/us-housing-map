@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 736 245" width="736" height="245" role="img" aria-labelledby="regions-wide-title regions-wide-desc">
+<title id="regions-wide-title">Different regions are stretched in different ways.</title>
+<desc id="regions-wide-desc">Bar chart by region. The Pacific coast has the highest share of mortgaged owners paying 30% or more of income (37%) and the lowest share of 2025 conventional loans above 90% loan-to-value (15%). The Midwest is the reverse: 22% and 39%. Mountain, Northeast and South Atlantic sit in between on both.</desc>
+<style>
+  .fig-text { font-family: var(--font-sans); fill: var(--color-text); }
+  .fig-muted { font-family: var(--font-sans); fill: var(--color-muted); }
+  .fig-title { font-family: var(--font-sans); font-weight: var(--weight-semibold); fill: var(--color-text); }
+  .fig-grid { stroke: var(--color-border); stroke-width: 1; }
+  .fig-zero { stroke: var(--color-muted); stroke-width: 1.5; }
+  .fig-halo { paint-order: stroke; stroke: var(--color-bg); stroke-width: 4px; stroke-linejoin: round; }
+</style>
+<text x="112.0" y="15.0" class="fig-title" font-size="15" text-anchor="start">Mortgaged owners paying 30%+ of</text>
+<text x="112.0" y="35.0" class="fig-title" font-size="15" text-anchor="start">income</text>
+<line x1="112.0" y1="47" x2="112.0" y2="221" class="fig-grid"/>
+<text x="112.0" y="237.0" class="fig-muted" font-size="13" text-anchor="middle">0%</text>
+<line x1="162.8" y1="47" x2="162.8" y2="221" class="fig-grid"/>
+<line x1="213.6" y1="47" x2="213.6" y2="221" class="fig-grid"/>
+<text x="213.6" y="237.0" class="fig-muted" font-size="13" text-anchor="middle">20%</text>
+<line x1="264.4" y1="47" x2="264.4" y2="221" class="fig-grid"/>
+<line x1="315.2" y1="47" x2="315.2" y2="221" class="fig-grid"/>
+<text x="315.2" y="237.0" class="fig-muted" font-size="13" text-anchor="middle">40%</text>
+<line x1="366.0" y1="47" x2="366.0" y2="221" class="fig-grid"/>
+<text x="100.0" y="72.5" class="fig-text" font-size="13" text-anchor="end">Pacific</text>
+<path d="M112.0,60.0 H294.4 A4,4 0 0 1 298.4,64.0 V72.0 A4,4 0 0 1 294.4,76.0 H112.0 Z" class="fig-bar" style="fill: var(--chart-payment); --i: 0"/>
+<text x="304.4" y="72.5" class="fig-text fig-halo" font-size="13" text-anchor="start">37%</text>
+<text x="100.0" y="106.5" class="fig-text" font-size="13" text-anchor="end">Mountain</text>
+<path d="M112.0,94.0 H249.7 A4,4 0 0 1 253.7,98.0 V106.0 A4,4 0 0 1 249.7,110.0 H112.0 Z" class="fig-bar" style="fill: var(--chart-payment); --i: 1"/>
+<text x="259.7" y="106.5" class="fig-text fig-halo" font-size="13" text-anchor="start">28%</text>
+<text x="100.0" y="140.5" class="fig-text" font-size="13" text-anchor="end">Northeast</text>
+<path d="M112.0,128.0 H252.3 A4,4 0 0 1 256.3,132.0 V140.0 A4,4 0 0 1 252.3,144.0 H112.0 Z" class="fig-bar" style="fill: var(--chart-payment); --i: 2"/>
+<text x="262.3" y="140.5" class="fig-text fig-halo" font-size="13" text-anchor="start">28%</text>
+<text x="100.0" y="174.5" class="fig-text" font-size="13" text-anchor="end">South Atlantic</text>
+<path d="M112.0,162.0 H244.7 A4,4 0 0 1 248.7,166.0 V174.0 A4,4 0 0 1 244.7,178.0 H112.0 Z" class="fig-bar" style="fill: var(--chart-payment); --i: 3"/>
+<text x="254.7" y="174.5" class="fig-text fig-halo" font-size="13" text-anchor="start">27%</text>
+<text x="100.0" y="208.5" class="fig-text" font-size="13" text-anchor="end">Midwest</text>
+<path d="M112.0,196.0 H221.8 A4,4 0 0 1 225.8,200.0 V208.0 A4,4 0 0 1 221.8,212.0 H112.0 Z" class="fig-bar" style="fill: var(--chart-payment); --i: 4"/>
+<text x="231.8" y="208.5" class="fig-text fig-halo" font-size="13" text-anchor="start">22%</text>
+<text x="438.0" y="15.0" class="fig-title" font-size="15" text-anchor="start">2025 conventional loans above 90%</text>
+<text x="438.0" y="35.0" class="fig-title" font-size="15" text-anchor="start">loan-to-value</text>
+<line x1="438.0" y1="47" x2="438.0" y2="221" class="fig-grid"/>
+<text x="438.0" y="237.0" class="fig-muted" font-size="13" text-anchor="middle">0%</text>
+<line x1="488.8" y1="47" x2="488.8" y2="221" class="fig-grid"/>
+<line x1="539.6" y1="47" x2="539.6" y2="221" class="fig-grid"/>
+<text x="539.6" y="237.0" class="fig-muted" font-size="13" text-anchor="middle">20%</text>
+<line x1="590.4" y1="47" x2="590.4" y2="221" class="fig-grid"/>
+<line x1="641.2" y1="47" x2="641.2" y2="221" class="fig-grid"/>
+<text x="641.2" y="237.0" class="fig-muted" font-size="13" text-anchor="middle">40%</text>
+<line x1="692.0" y1="47" x2="692.0" y2="221" class="fig-grid"/>
+<path d="M438.0,60.0 H512.2 A4,4 0 0 1 516.2,64.0 V72.0 A4,4 0 0 1 512.2,76.0 H438.0 Z" class="fig-bar" style="fill: var(--chart-equity); --i: 5"/>
+<text x="522.2" y="72.5" class="fig-text fig-halo" font-size="13" text-anchor="start">15%</text>
+<path d="M438.0,94.0 H567.1 A4,4 0 0 1 571.1,98.0 V106.0 A4,4 0 0 1 567.1,110.0 H438.0 Z" class="fig-bar" style="fill: var(--chart-equity); --i: 6"/>
+<text x="577.1" y="106.5" class="fig-text fig-halo" font-size="13" text-anchor="start">26%</text>
+<path d="M438.0,128.0 H554.9 A4,4 0 0 1 558.9,132.0 V140.0 A4,4 0 0 1 554.9,144.0 H438.0 Z" class="fig-bar" style="fill: var(--chart-equity); --i: 7"/>
+<text x="564.9" y="140.5" class="fig-text fig-halo" font-size="13" text-anchor="start">24%</text>
+<path d="M438.0,162.0 H590.5 A4,4 0 0 1 594.5,166.0 V174.0 A4,4 0 0 1 590.5,178.0 H438.0 Z" class="fig-bar" style="fill: var(--chart-equity); --i: 8"/>
+<text x="600.5" y="174.5" class="fig-text fig-halo" font-size="13" text-anchor="start">31%</text>
+<path d="M438.0,196.0 H629.6 A4,4 0 0 1 633.6,200.0 V208.0 A4,4 0 0 1 629.6,212.0 H438.0 Z" class="fig-bar" style="fill: var(--chart-equity); --i: 9"/>
+<text x="639.6" y="208.5" class="fig-text fig-halo" font-size="13" text-anchor="start">39%</text>
+</svg>
