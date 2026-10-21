@@ -26,7 +26,7 @@
     },
     "run_date": "2026-10-16"
   },
-  "method": "Regional and coastal-metro comparison of current conditions (descriptive only).\n\nFor each area: the household-weighted median of county values for owner cost\nburden (share of mortgaged owners paying 30%+), new-buyer PTI, the high-CLTV\nshare (conventional loans), property tax % of owner income, and the Burden and\nEquity scores. Inputs are the same processed files the map uses, so the\nnumbers describe the live layers.\n\nMethod:\n  - weight = total households (ACS B11001_E001, same 5-year vintage as the\n    ACS layers);\n  - weighted median = the first county value, in sorted order, at which the\n    cumulative weight reaches half the total weight of counties with a value;\n  - a county without a value for a measure is left out of that measure (the\n    output records the share of households covered);\n  - metros are the county containing the principal city (New York: all five\n    boroughs), not the full metro area.",
+  "method": "Regional and coastal-metro comparison of current conditions (descriptive only).\n\nFor each area: the weighted median of county values for owner cost burden\n(share of mortgaged owners paying 30%+), new-buyer PTI, the high-CLTV share\n(conventional loans), property tax % of owner income, and the Burden and\nEquity scores. Inputs are the same processed files the map uses, so the\nnumbers describe the live layers.\n\nMethod:\n  - weight = total households (ACS B11001_E001, same 5-year vintage as the\n    ACS layers), except owner cost burden, which is weighted by mortgaged\n    owner households with a computed burden (B25091: units with a mortgage\n    minus \"not computed\", the share's own denominator), since it is a share\n    of mortgaged owners;\n  - weighted median = the first county value, in sorted order, at which the\n    cumulative weight reaches half the total weight of counties with a value;\n  - a county without a value for a measure is left out of that measure (the\n    output records the share of households covered);\n  - metros are the county containing the principal city (New York: all five\n    boroughs), not the full metro area.",
   "metros": {
     "Boston (Suffolk Co.)": {
       "counties": 1,
@@ -34,33 +34,39 @@
       "measures": {
         "burden": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 1.0552
+          "coverage": 1.0,
+          "median": 1.0552,
+          "weight": "households"
         },
         "cltv90": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 21.4
+          "coverage": 1.0,
+          "median": 21.4,
+          "weight": "households"
         },
         "cost_burden": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 33.0
+          "coverage": 1.0,
+          "median": 33.0,
+          "weight": "mortgaged_owners"
         },
         "equity": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 0.5953
+          "coverage": 1.0,
+          "median": 0.5953,
+          "weight": "households"
         },
         "prop_tax": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 3.13
+          "coverage": 1.0,
+          "median": 3.13,
+          "weight": "households"
         },
         "pti": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 0.2849
+          "coverage": 1.0,
+          "median": 0.2849,
+          "weight": "households"
         }
       }
     },
@@ -70,33 +76,39 @@
       "measures": {
         "burden": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 0.9627
+          "coverage": 1.0,
+          "median": 0.9627,
+          "weight": "households"
         },
         "cltv90": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 24.6
+          "coverage": 1.0,
+          "median": 24.6,
+          "weight": "households"
         },
         "cost_burden": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 28.1
+          "coverage": 1.0,
+          "median": 28.1,
+          "weight": "mortgaged_owners"
         },
         "equity": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 0.6828
+          "coverage": 1.0,
+          "median": 0.6828,
+          "weight": "households"
         },
         "prop_tax": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 2.09
+          "coverage": 1.0,
+          "median": 2.09,
+          "weight": "households"
         },
         "pti": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 0.2811
+          "coverage": 1.0,
+          "median": 0.2811,
+          "weight": "households"
         }
       }
     },
@@ -106,33 +118,39 @@
       "measures": {
         "burden": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 1.4226
+          "coverage": 1.0,
+          "median": 1.4226,
+          "weight": "households"
         },
         "cltv90": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 15.1
+          "coverage": 1.0,
+          "median": 15.1,
+          "weight": "households"
         },
         "cost_burden": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 43.0
+          "coverage": 1.0,
+          "median": 43.0,
+          "weight": "mortgaged_owners"
         },
         "equity": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 0.4205
+          "coverage": 1.0,
+          "median": 0.4205,
+          "weight": "households"
         },
         "prop_tax": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 4.45
+          "coverage": 1.0,
+          "median": 4.45,
+          "weight": "households"
         },
         "pti": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 0.2985
+          "coverage": 1.0,
+          "median": 0.2985,
+          "weight": "households"
         }
       }
     },
@@ -142,33 +160,39 @@
       "measures": {
         "burden": {
           "counties": 5,
-          "household_coverage": 1.0,
-          "median": 1.3202
+          "coverage": 1.0,
+          "median": 1.3202,
+          "weight": "households"
         },
         "cltv90": {
           "counties": 5,
-          "household_coverage": 1.0,
-          "median": 4.3
+          "coverage": 1.0,
+          "median": 4.3,
+          "weight": "households"
         },
         "cost_burden": {
           "counties": 5,
-          "household_coverage": 1.0,
-          "median": 46.1
+          "coverage": 1.0,
+          "median": 46.1,
+          "weight": "mortgaged_owners"
         },
         "equity": {
           "counties": 5,
-          "household_coverage": 1.0,
-          "median": 0.1196
+          "coverage": 1.0,
+          "median": 0.1196,
+          "weight": "households"
         },
         "prop_tax": {
           "counties": 5,
-          "household_coverage": 1.0,
-          "median": 5.2
+          "coverage": 1.0,
+          "median": 5.2,
+          "weight": "households"
         },
         "pti": {
           "counties": 5,
-          "household_coverage": 1.0,
-          "median": 0.286
+          "coverage": 1.0,
+          "median": 0.286,
+          "weight": "households"
         }
       }
     },
@@ -178,33 +202,39 @@
       "measures": {
         "burden": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 1.051
+          "coverage": 1.0,
+          "median": 1.051,
+          "weight": "households"
         },
         "cltv90": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 5.4
+          "coverage": 1.0,
+          "median": 5.4,
+          "weight": "households"
         },
         "cost_burden": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 36.4
+          "coverage": 1.0,
+          "median": 36.4,
+          "weight": "mortgaged_owners"
         },
         "equity": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 0.1504
+          "coverage": 1.0,
+          "median": 0.1504,
+          "weight": "households"
         },
         "prop_tax": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 5.17
+          "coverage": 1.0,
+          "median": 5.17,
+          "weight": "households"
         },
         "pti": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 0.2741
+          "coverage": 1.0,
+          "median": 0.2741,
+          "weight": "households"
         }
       }
     },
@@ -214,33 +244,39 @@
       "measures": {
         "burden": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 0.9835
+          "coverage": 1.0,
+          "median": 0.9835,
+          "weight": "households"
         },
         "cltv90": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 13.1
+          "coverage": 1.0,
+          "median": 13.1,
+          "weight": "households"
         },
         "cost_burden": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 28.2
+          "coverage": 1.0,
+          "median": 28.2,
+          "weight": "mortgaged_owners"
         },
         "equity": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 0.3647
+          "coverage": 1.0,
+          "median": 0.3647,
+          "weight": "households"
         },
         "prop_tax": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 4.28
+          "coverage": 1.0,
+          "median": 4.28,
+          "weight": "households"
         },
         "pti": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 0.295
+          "coverage": 1.0,
+          "median": 0.295,
+          "weight": "households"
         }
       }
     },
@@ -250,33 +286,39 @@
       "measures": {
         "burden": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 0.8601
+          "coverage": 1.0,
+          "median": 0.8601,
+          "weight": "households"
         },
         "cltv90": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 25.5
+          "coverage": 1.0,
+          "median": 25.5,
+          "weight": "households"
         },
         "cost_burden": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 25.2
+          "coverage": 1.0,
+          "median": 25.2,
+          "weight": "mortgaged_owners"
         },
         "equity": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 0.7077
+          "coverage": 1.0,
+          "median": 0.7077,
+          "weight": "households"
         },
         "prop_tax": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 2.47
+          "coverage": 1.0,
+          "median": 2.47,
+          "weight": "households"
         },
         "pti": {
           "counties": 1,
-          "household_coverage": 1.0,
-          "median": 0.2553
+          "coverage": 1.0,
+          "median": 0.2553,
+          "weight": "households"
         }
       }
     }
@@ -288,33 +330,39 @@
       "measures": {
         "burden": {
           "counties": 795,
-          "household_coverage": 0.9996815946266772,
-          "median": 1.0684
+          "coverage": 0.9996815946266772,
+          "median": 1.0684,
+          "weight": "households"
         },
         "cltv90": {
           "counties": 691,
-          "household_coverage": 0.9906462325091825,
-          "median": 29.6
+          "coverage": 0.9906462325091825,
+          "median": 29.6,
+          "weight": "households"
         },
         "cost_burden": {
           "counties": 806,
-          "household_coverage": 1.0,
-          "median": 28.4
+          "coverage": 1.0,
+          "median": 27.8,
+          "weight": "mortgaged_owners"
         },
         "equity": {
           "counties": 691,
-          "household_coverage": 0.9906462325091825,
-          "median": 0.8207
+          "coverage": 0.9906462325091825,
+          "median": 0.8207,
+          "weight": "households"
         },
         "prop_tax": {
           "counties": 805,
-          "household_coverage": 0.9999782260761818,
-          "median": 3.31
+          "coverage": 0.9999782260761818,
+          "median": 3.31,
+          "weight": "households"
         },
         "pti": {
           "counties": 733,
-          "household_coverage": 0.9591438133997177,
-          "median": 0.2776
+          "coverage": 0.9591438133997177,
+          "median": 0.2776,
+          "weight": "households"
         }
       }
     },
@@ -324,33 +372,39 @@
       "measures": {
         "burden": {
           "counties": 363,
-          "household_coverage": 0.9982664835880407,
-          "median": 1.2004
+          "coverage": 0.9982664835880407,
+          "median": 1.2004,
+          "weight": "households"
         },
         "cltv90": {
           "counties": 310,
-          "household_coverage": 0.9927600886700183,
-          "median": 23.5
+          "coverage": 0.9927600886700183,
+          "median": 23.5,
+          "weight": "households"
         },
         "cost_burden": {
           "counties": 413,
-          "household_coverage": 0.9999898371250037,
-          "median": 33.2
+          "coverage": 0.9999983068837385,
+          "median": 32.8,
+          "weight": "mortgaged_owners"
         },
         "equity": {
           "counties": 310,
-          "household_coverage": 0.9927600886700183,
-          "median": 0.6531
+          "coverage": 0.9927600886700183,
+          "median": 0.6531,
+          "weight": "households"
         },
         "prop_tax": {
           "counties": 414,
-          "household_coverage": 1.0,
-          "median": 3.53
+          "coverage": 1.0,
+          "median": 3.53,
+          "weight": "households"
         },
         "pti": {
           "counties": 348,
-          "household_coverage": 0.9962861443448771,
-          "median": 0.2915
+          "coverage": 0.9962861443448771,
+          "median": 0.2915,
+          "weight": "households"
         }
       }
     }
@@ -362,33 +416,39 @@
       "measures": {
         "burden": {
           "counties": 903,
-          "household_coverage": 0.9934443497422646,
-          "median": 0.8944
+          "coverage": 0.9934443497422646,
+          "median": 0.8944,
+          "weight": "households"
         },
         "cltv90": {
           "counties": 756,
-          "household_coverage": 0.9775482903360769,
-          "median": 38.5
+          "coverage": 0.9775482903360769,
+          "median": 38.5,
+          "weight": "households"
         },
         "cost_burden": {
           "counties": 1053,
-          "household_coverage": 0.9999752251375407,
-          "median": 22.4
+          "coverage": 0.9999965580898913,
+          "median": 22.4,
+          "weight": "mortgaged_owners"
         },
         "equity": {
           "counties": 756,
-          "household_coverage": 0.9775482903360769,
-          "median": 1.0694
+          "coverage": 0.9775482903360769,
+          "median": 1.0694,
+          "weight": "households"
         },
         "prop_tax": {
           "counties": 1055,
-          "household_coverage": 1.0,
-          "median": 3.27
+          "coverage": 1.0,
+          "median": 3.27,
+          "weight": "households"
         },
         "pti": {
           "counties": 841,
-          "household_coverage": 0.9881865018755787,
-          "median": 0.2585
+          "coverage": 0.9881865018755787,
+          "median": 0.2585,
+          "weight": "households"
         }
       }
     },
@@ -398,33 +458,39 @@
       "measures": {
         "burden": {
           "counties": 235,
-          "household_coverage": 0.9954386762497821,
-          "median": 1.0679
+          "coverage": 0.9954386762497821,
+          "median": 1.0679,
+          "weight": "households"
         },
         "cltv90": {
           "counties": 189,
-          "household_coverage": 0.9815139378877935,
-          "median": 26.2
+          "coverage": 0.9815139378877935,
+          "median": 26.2,
+          "weight": "households"
         },
         "cost_burden": {
           "counties": 280,
-          "household_coverage": 0.99997084699668,
-          "median": 27.9
+          "coverage": 0.9999954410179295,
+          "median": 27.9,
+          "weight": "mortgaged_owners"
         },
         "equity": {
           "counties": 189,
-          "household_coverage": 0.9815139378877935,
-          "median": 0.7269
+          "coverage": 0.9815139378877935,
+          "median": 0.7269,
+          "weight": "households"
         },
         "prop_tax": {
           "counties": 281,
-          "household_coverage": 1.0,
-          "median": 2.1
+          "coverage": 1.0,
+          "median": 2.1,
+          "weight": "households"
         },
         "pti": {
           "counties": 221,
-          "household_coverage": 0.9898630114644695,
-          "median": 0.2812
+          "coverage": 0.9898630114644695,
+          "median": 0.2812,
+          "weight": "households"
         }
       }
     },
@@ -434,33 +500,39 @@
       "measures": {
         "burden": {
           "counties": 216,
-          "household_coverage": 0.9998169280959425,
-          "median": 1.0399
+          "coverage": 0.9998169280959425,
+          "median": 1.0399,
+          "weight": "households"
         },
         "cltv90": {
           "counties": 214,
-          "household_coverage": 0.9995790585571597,
-          "median": 23.8
+          "coverage": 0.9995790585571597,
+          "median": 23.8,
+          "weight": "households"
         },
         "cost_burden": {
           "counties": 218,
-          "household_coverage": 1.0,
-          "median": 29.2
+          "coverage": 1.0,
+          "median": 28.4,
+          "weight": "mortgaged_owners"
         },
         "equity": {
           "counties": 214,
-          "household_coverage": 0.9995790585571597,
-          "median": 0.6619
+          "coverage": 0.9995790585571597,
+          "median": 0.6619,
+          "weight": "households"
         },
         "prop_tax": {
           "counties": 218,
-          "household_coverage": 1.0,
-          "median": 5.07
+          "coverage": 1.0,
+          "median": 5.07,
+          "weight": "households"
         },
         "pti": {
           "counties": 214,
-          "household_coverage": 0.9994715436502555,
-          "median": 0.286
+          "coverage": 0.9994715436502555,
+          "median": 0.286,
+          "weight": "households"
         }
       }
     },
@@ -470,33 +542,39 @@
       "measures": {
         "burden": {
           "counties": 128,
-          "household_coverage": 0.999779830522963,
-          "median": 1.2598
+          "coverage": 0.999779830522963,
+          "median": 1.2598,
+          "weight": "households"
         },
         "cltv90": {
           "counties": 121,
-          "household_coverage": 0.9987786485576362,
-          "median": 15.4
+          "coverage": 0.9987786485576362,
+          "median": 15.4,
+          "weight": "households"
         },
         "cost_burden": {
           "counties": 133,
-          "household_coverage": 1.0,
-          "median": 36.7
+          "coverage": 1.0,
+          "median": 36.7,
+          "weight": "mortgaged_owners"
         },
         "equity": {
           "counties": 121,
-          "household_coverage": 0.9987786485576362,
-          "median": 0.4283
+          "coverage": 0.9987786485576362,
+          "median": 0.4283,
+          "weight": "households"
         },
         "prop_tax": {
           "counties": 133,
-          "household_coverage": 1.0,
-          "median": 4.18
+          "coverage": 1.0,
+          "median": 4.18,
+          "weight": "households"
         },
         "pti": {
           "counties": 127,
-          "household_coverage": 0.9997235880227586,
-          "median": 0.295
+          "coverage": 0.9997235880227586,
+          "median": 0.295,
+          "weight": "households"
         }
       }
     },
@@ -506,33 +584,39 @@
       "measures": {
         "burden": {
           "counties": 579,
-          "household_coverage": 0.9995658306650995,
-          "median": 1.1118
+          "coverage": 0.9995658306650995,
+          "median": 1.1118,
+          "weight": "households"
         },
         "cltv90": {
           "counties": 477,
-          "household_coverage": 0.9830051121195831,
-          "median": 30.8
+          "coverage": 0.9830051121195831,
+          "median": 30.8,
+          "weight": "households"
         },
         "cost_burden": {
           "counties": 588,
-          "household_coverage": 1.0,
-          "median": 27.6
+          "coverage": 1.0,
+          "median": 26.9,
+          "weight": "mortgaged_owners"
         },
         "equity": {
           "counties": 477,
-          "household_coverage": 0.9830051121195831,
-          "median": 0.856
+          "coverage": 0.9830051121195831,
+          "median": 0.856,
+          "weight": "households"
         },
         "prop_tax": {
           "counties": 587,
-          "household_coverage": 0.9999596007080894,
-          "median": 2.55
+          "coverage": 0.9999596007080894,
+          "median": 2.55,
+          "weight": "households"
         },
         "pti": {
           "counties": 519,
-          "household_coverage": 0.9246475587733972,
-          "median": 0.2714
+          "coverage": 0.9246475587733972,
+          "median": 0.2714,
+          "weight": "households"
         }
       }
     }
