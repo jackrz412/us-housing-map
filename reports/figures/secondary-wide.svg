@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 736 306" width="736" height="306" role="img" aria-labelledby="secondary-wide-title secondary-wide-desc">
+<title id="secondary-wide-title">Partial rank correlation with 2023–2025 delinquency, controlling for each county&#x27;s 2017–2019 level. Bars are 95% bootstrap intervals.</title>
+<desc id="secondary-wide-desc">Dot plot of seven measures. Loans above 90% loan-to-value have the strongest positive association (+0.34), followed by lower median income (+0.27) and applications denied for debt-to-income (+0.23). The Burden score is about zero (+0.01), and new buyers&#x27; payment-to-income (-0.12) and owners paying 30%+ of income (-0.14) are negative.</desc>
+<style>
+  .fig-text { font-family: var(--font-sans); fill: var(--color-text); }
+  .fig-muted { font-family: var(--font-sans); fill: var(--color-muted); }
+  .fig-title { font-family: var(--font-sans); font-weight: var(--weight-semibold); fill: var(--color-text); }
+  .fig-grid { stroke: var(--color-border); stroke-width: 1; }
+  .fig-zero { stroke: var(--color-muted); stroke-width: 1.5; }
+  .fig-halo { paint-order: stroke; stroke: var(--color-bg); stroke-width: 4px; stroke-linejoin: round; }
+</style>
+<line x1="319.2" y1="8" x2="319.2" y2="260" class="fig-grid"/>
+<line x1="376.5" y1="8" x2="376.5" y2="260" class="fig-grid"/>
+<line x1="491.0" y1="8" x2="491.0" y2="260" class="fig-grid"/>
+<line x1="548.2" y1="8" x2="548.2" y2="260" class="fig-grid"/>
+<line x1="605.5" y1="8" x2="605.5" y2="260" class="fig-grid"/>
+<line x1="662.8" y1="8" x2="662.8" y2="260" class="fig-grid"/>
+<line x1="433.8" y1="4" x2="433.8" y2="260" class="fig-zero"/>
+<text x="319.2" y="276.0" class="fig-muted" font-size="13" text-anchor="middle">-0.2</text>
+<text x="433.8" y="276.0" class="fig-muted" font-size="13" text-anchor="middle">0</text>
+<text x="548.2" y="276.0" class="fig-muted" font-size="13" text-anchor="middle">+0.2</text>
+<text x="662.8" y="276.0" class="fig-muted" font-size="13" text-anchor="middle">+0.4</text>
+<text x="491.0" y="298.0" class="fig-muted" font-size="13" text-anchor="middle">Partial rank correlation (positive = higher measure, higher later delinquency)</text>
+<text x="246.0" y="30.5" class="fig-text" font-size="13" text-anchor="end">Loans above 90% loan-to-value</text>
+<line x1="577.7" y1="26.0" x2="673.3" y2="26.0" class="fig-ci" style="stroke: var(--color-text); --i: 0" stroke-width="2" stroke-linecap="round"/>
+<circle cx="626.4" cy="26.0" r="8" class="fig-dot" style="fill: var(--color-text); stroke: var(--color-bg); --i: 0" stroke-width="2"/>
+<text x="681.3" y="30.5" class="fig-text fig-halo" font-size="13" text-anchor="start">+0.34</text>
+<text x="246.0" y="66.5" class="fig-text" font-size="13" text-anchor="end">Lower median income</text>
+<line x1="535.7" y1="62.0" x2="634.0" y2="62.0" class="fig-ci" style="stroke: var(--color-text); --i: 1" stroke-width="2" stroke-linecap="round"/>
+<circle cx="586.2" cy="62.0" r="8" class="fig-dot" style="fill: var(--color-text); stroke: var(--color-bg); --i: 1" stroke-width="2"/>
+<text x="642.0" y="66.5" class="fig-text fig-halo" font-size="13" text-anchor="start">+0.27</text>
+<text x="246.0" y="102.5" class="fig-text" font-size="13" text-anchor="end">Applications denied for debt-to-income</text>
+<line x1="515.5" y1="98.0" x2="609.6" y2="98.0" class="fig-ci" style="stroke: var(--color-text); --i: 2" stroke-width="2" stroke-linecap="round"/>
+<circle cx="564.1" cy="98.0" r="8" class="fig-dot" style="fill: var(--color-text); stroke: var(--color-bg); --i: 2" stroke-width="2"/>
+<text x="617.6" y="102.5" class="fig-text fig-halo" font-size="13" text-anchor="start">+0.23</text>
+<text x="246.0" y="138.5" class="fig-text" font-size="13" text-anchor="end">Loans with debt above 43% of income</text>
+<line x1="460.8" y1="134.0" x2="561.3" y2="134.0" class="fig-ci" style="stroke: var(--color-text); --i: 3" stroke-width="2" stroke-linecap="round"/>
+<circle cx="510.1" cy="134.0" r="8" class="fig-dot" style="fill: var(--color-text); stroke: var(--color-bg); --i: 3" stroke-width="2"/>
+<text x="569.3" y="138.5" class="fig-text fig-halo" font-size="13" text-anchor="start">+0.13</text>
+<text x="246.0" y="174.5" class="fig-title" font-size="13" text-anchor="end" font-weight="600">Burden score</text>
+<line x1="386.0" y1="170.0" x2="485.9" y2="170.0" class="fig-ci" style="stroke: var(--color-accent); --i: 4" stroke-width="3" stroke-linecap="round"/>
+<circle cx="437.4" cy="170.0" r="8" class="fig-dot" style="fill: var(--color-accent); stroke: var(--color-bg); --i: 4" stroke-width="2"/>
+<text x="493.9" y="174.5" class="fig-text fig-halo" font-size="13" text-anchor="start" font-weight="600">+0.01</text>
+<text x="246.0" y="210.5" class="fig-text" font-size="13" text-anchor="end">New buyers&#x27; payment-to-income</text>
+<line x1="317.2" y1="206.0" x2="417.8" y2="206.0" class="fig-ci" style="stroke: var(--color-text); --i: 5" stroke-width="2" stroke-linecap="round"/>
+<circle cx="367.8" cy="206.0" r="8" class="fig-dot" style="fill: var(--color-text); stroke: var(--color-bg); --i: 5" stroke-width="2"/>
+<text x="309.2" y="210.5" class="fig-text fig-halo" font-size="13" text-anchor="end">-0.12</text>
+<text x="246.0" y="246.5" class="fig-text" font-size="13" text-anchor="end">Owners paying 30%+ of income on housing</text>
+<line x1="303.2" y1="242.0" x2="404.9" y2="242.0" class="fig-ci" style="stroke: var(--color-text); --i: 6" stroke-width="2" stroke-linecap="round"/>
+<circle cx="351.7" cy="242.0" r="8" class="fig-dot" style="fill: var(--color-text); stroke: var(--color-bg); --i: 6" stroke-width="2"/>
+<text x="295.2" y="246.5" class="fig-text fig-halo" font-size="13" text-anchor="end">-0.14</text>
+</svg>
