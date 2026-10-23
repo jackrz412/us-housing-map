@@ -39,6 +39,9 @@ def main():
         page.wait_for_function("document.querySelectorAll('.counties path').length > 3000")
         page.wait_for_function("document.getElementById('layer-title').textContent.includes('Burden')")
         page.evaluate("document.fonts.ready")
+        # Hide the interactive controls (county search, keyboard hints, zoom buttons): in a still
+        # image they look clickable but aren't. Only this screenshot changes, not the live map.
+        page.add_style_tag(content="#map-card .search, #map-card .zoom-controls { display: none !important; }")
         card = page.locator("#map-card")
         for out in outs:
             out.mkdir(parents=True, exist_ok=True)
