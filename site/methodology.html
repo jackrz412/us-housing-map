@@ -143,7 +143,7 @@
       <li><strong>Equity</strong>: could they sell or refinance their way out? How much recent lending was at high loan-to-value.</li>
     </ul>
     <p>Every input is divided by a fixed benchmark, so <strong>1.0 means "at the benchmark"</strong> and 1.2 means 20% above it:</p>
-    <pre class="formula">x_i      = c_i / b_i
+    <pre class="formula" tabindex="0">x_i      = c_i / b_i
 
 NewBuyer = mean(x_PTI, x_D, x_R)
 Existing = x_S
@@ -174,7 +174,7 @@ Equity   = x_CLTV</pre>
 
     <h2 id="pti">2. Payment-to-income, loan by loan</h2>
     <p>For each home-purchase loan, the monthly payment (principal and interest, property tax, insurance) is divided by monthly income. The county value is the median.</p>
-    <pre class="formula">PTI = (M + T + I) / (income / 12)
+    <pre class="formula" tabindex="0">PTI = (M + T + I) / (income / 12)
 M   = L · r(1+r)^n / ((1+r)^n − 1)
 T   = τ · V / 12
 I   = premium / 12</pre>
