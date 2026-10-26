@@ -843,8 +843,10 @@ function init(topo, meta, data) {
     hideTermTip();
   }
 
-  // Sources line, from meta.json.
-  const periods = [...new Set(DATA_FILES.map((file) => meta[file]?.legend_period).filter(Boolean))];
+  // Sources line, from meta.json. The index layers' period lists several sources
+  // ("HMDA 2025 · ACS … · FIO 2022"), so split on " · " before dropping repeats.
+  const periods = [...new Set(DATA_FILES.flatMap((file) =>
+    (meta[file]?.legend_period ?? "").split(" · ")).filter(Boolean))];
   const processed = d3.max(DATA_FILES, (file) => meta[file]?.run_date);
   document.getElementById("sources").textContent =
     `Sources: ${periods.join("; ")} (CFPB Mortgage Performance Trends, Census ACS, FFIEC HMDA, Census Building Permits Survey, Treasury Federal Insurance Office). Processed ${processed}.`;
