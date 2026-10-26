@@ -54,7 +54,14 @@ def main():
         "hmda_source_sha256": source["sha256"],
         "acs_period": f"{ACS_YEAR - 4}–{ACS_YEAR}",
         "acs_source_url": url_for("b25091", ACS_YEAR),
-        "national_counts": {k: report["national"][k] for k in ("loans", "kept")},
+        # The loans behind each share: k of n. PTI isn't computed here (b_PTI is fixed and no
+        # premiums are loaded), so the PTI rule counts would all read "no tax or premium".
+        "national_counts": {
+            "originations": report["national"]["loans"],
+            "d": {**report["national_shares"]["d"], "of": "originations with a DTI"},
+            "r": {**report["national_shares"]["r"], "of": "applications"},
+            "cltv": {**report["national_shares"]["cltv"], "of": "conventional loans with a CLTV"},
+        },
     }
     write_json(meta_path, meta)
 

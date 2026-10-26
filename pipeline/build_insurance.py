@@ -207,7 +207,13 @@ def main():
         counties = [c for c in acs.read_table("b25077", year=acs_year) if int(c[:2]) <= 56]
         crosswalk, cw_sha, cw_source = fetch_crosswalk(token, cw_year, cw_quarter, counties)
         result = county_premiums(fio[year], crosswalk)
-        values = {c: p for c, (p, _) in result.items() if int(c[:2]) <= 56}
+        # Keep only real counties of that vintage. A few HUD rows carry just a state code
+        # (e.g. "48", or Pacific territories like "64"), which zero-pads to a bogus "00048".
+        valid = set(counties)
+        dropped = sorted(set(result) - valid)
+        if dropped:
+            print(f"  {year}: dropped {len(dropped)} codes not in the county list: {dropped}")
+        values = {c: p for c, (p, _) in result.items() if c in valid}
         name = f"fio_premium_{year}"
         write_json(PROCESSED_DIR / f"{name}.json", values)
         kept = sum(v is not None for v in values.values())
@@ -224,8 +230,7 @@ def main():
                          f"({cw_source})",
             "crosswalk_sha256": cw_sha,
             "min_coverage": MIN_COVERAGE,
-            "coverage_below_min": sorted(c for c, (p, cov) in result.items()
-                                         if p is None and int(c[:2]) <= 56),
+            "coverage_below_min": sorted(c for c, p in values.items() if p is None),
         }
     write_json(meta_path, meta)
 
