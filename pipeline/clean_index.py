@@ -38,6 +38,7 @@ def main():
     burden, equity, report = si.compute(CSV_PATH, ACS_YEAR, premium, benchmarks, shapes)
 
     report.pop("national_values")  # only used for 2019 benchmarks
+    report.pop("national_shares")  # same: the benchmarks' metadata
     changed = {
         "burden": write_layer("burden", burden),
         "equity": write_layer("equity", equity),
