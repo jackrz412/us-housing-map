@@ -204,6 +204,41 @@ def validate_benchmarks(r):
             "benchmarks are positive percentages or ratios", str(b))
 
 
+# --- Insurance premiums (DECISIONS 024) ---------------------------------------------
+# Built once, locally, so the refresh never rewrites them, but a rebuild could still
+# let a bad code through (e.g. "00048" from a HUD row with only a state code). 2022
+# uses today's counties, so it gets the map anti-join. 2018/2019 use 2019 codes for
+# the backtest, so they may also hold the counties that existed then but are off
+# today's map: Connecticut's 8 old counties and Alaska's Valdez-Cordova (split 2019).
+PREMIUM_YEARS = (2018, 2019, 2022)
+PREMIUM_MAP_YEAR = 2022
+COUNTIES_2019_ONLY = {"02261", "09001", "09003", "09005", "09007", "09009", "09011",
+                      "09013", "09015"}
+
+
+def validate_premiums(shapes, meta, r):
+    for year in PREMIUM_YEARS:
+        name = f"fio_premium_{year}"
+        print(f"\n[{name}]")
+        path = PROCESSED_DIR / f"{name}.json"
+        if not path.exists():
+            r.check(False, f"{path.name} exists")
+            continue
+        data = json.loads(path.read_text())
+        allowed = set(shapes) | (COUNTIES_2019_ONLY if year != PREMIUM_MAP_YEAR else set())
+        unknown = set(data) - allowed
+        r.check(not unknown, "every FIPS is a county of its vintage (anti-join)", sample(unknown))
+        if year == PREMIUM_MAP_YEAR:
+            r.check(set(shapes) <= set(data), "every map county has a row",
+                    sample(set(shapes) - set(data)))
+
+        # The meta list must name exactly the counties left null for low coverage.
+        listed = set(meta.get(name, {}).get("coverage_below_min", []))
+        nulls = {k for k, v in data.items() if v is None}
+        r.check(listed == nulls, f"coverage_below_min ({len(listed)}) matches the null counties",
+                f"listed only: {sample(listed - nulls)}; null only: {sample(nulls - listed)}")
+
+
 def main():
     shapes = map_counties()
     print(f"map universe: {len(shapes):,} counties (50 states + DC)")
@@ -214,6 +249,7 @@ def main():
     for name, rules in LAYERS.items():
         validate_layer(name, rules, shapes, meta, r)
     validate_benchmarks(r)
+    validate_premiums(shapes, meta, r)
     for name, rules in INDEX_LAYERS.items():
         validate_index(name, rules, shapes, meta, r)
 

@@ -355,4 +355,8 @@ def compute(csv_path, acs_year, premium, benchmarks, shapes, renames=None):
     nat["s"] = round(s_national, 2)
     report = rule_report(counties, national, shapes)
     report["national_values"] = nat
+    # Each share's numerator (k) and denominator (n), so the benchmarks' metadata can say
+    # which loans they rest on.
+    report["national_shares"] = {c: {"k": national[f"k_{c}"], "n": national[f"n_{c}"]}
+                                 for c in ("d", "r", "cltv")}
     return burden, equity, report
